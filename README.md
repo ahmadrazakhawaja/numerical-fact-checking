@@ -1,1 +1,1 @@
-# numerical-fact-checking
+# Numerical fact checking

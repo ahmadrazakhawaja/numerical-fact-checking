@@ -60,7 +60,7 @@ def load_claims(dataset_dir: Path, split: str, languages: Iterable[str]) -> Dict
             rows = json.load(f)
         for idx, row in enumerate(rows):
             verdict_list = [normalize_label(v) for v in row.get("Verdict_list", [])]
-            gold_verdict = normalize_label(row.get("verdict", ""))
+            gold_verdict = normalize_label(row.get("label", ""))
             num_traces = len(row.get("Reasoning_traces", []))
             claims[(language, idx)] = ClaimRecord(
                 language=language,

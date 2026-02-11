@@ -97,6 +97,8 @@ def maybe_run_evaluator(
     dataset_dir: Path,
     predictions_path: Path,
     languages: List[str],
+    target_split: str,
+    seed: int,
     k: int,
     split: str,
 ) -> None:
@@ -114,6 +116,8 @@ def maybe_run_evaluator(
         str(k),
         "--languages",
         *languages,
+        "--output",
+        f"results/random_baseline_eval_{target_split}_results_seed{seed}.json",
     ]
     subprocess.run(cmd, check=True)
 
@@ -182,6 +186,8 @@ def main() -> None:
             languages=languages,
             k=args.eval_k,
             split=args.target_split,
+            target_split=args.target_split,
+            seed=args.seed,
         )
 
 

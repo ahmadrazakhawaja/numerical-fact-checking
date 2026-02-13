@@ -18,7 +18,9 @@ Default behavior:
 
 from __future__ import annotations
 
+import asyncio
 import argparse
+import inspect
 import json
 import time
 from pathlib import Path
@@ -91,10 +93,39 @@ class GoogleTransClient:
         self.retry_wait_seconds = max(0.0, retry_wait_seconds)
         self.max_chars_per_request = max(500, max_chars_per_request)
         self.translator = Translator()
+        self._runner: asyncio.Runner | None = None
 
         # Cache short strings only to avoid large memory usage on long traces.
         self._short_cache: Dict[Tuple[str, str], str] = {}
         self._cache_limit_chars = 256
+
+    def _get_runner(self) -> asyncio.Runner:
+        if self._runner is None:
+            self._runner = asyncio.Runner()
+        return self._runner
+
+    def _resolve_maybe_awaitable(self, value: object) -> object:
+        if inspect.isawaitable(value):
+            runner = self._get_runner()
+            return runner.run(value)
+        return value
+
+    def close(self) -> None:
+        # Best-effort close for async Translator client variants.
+        translator_client = getattr(self.translator, "client", None)
+        aclose = getattr(translator_client, "aclose", None)
+        if callable(aclose):
+            try:
+                self._resolve_maybe_awaitable(aclose())
+            except Exception:
+                pass
+
+        if self._runner is not None:
+            try:
+                self._runner.close()
+            except Exception:
+                pass
+            self._runner = None
 
     def _translate_single(self, text: str, source_lang: str) -> str:
         last_error: Exception | None = None
@@ -105,6 +136,7 @@ class GoogleTransClient:
                     src=source_lang,
                     dest=self.dest_lang,
                 )
+                result = self._resolve_maybe_awaitable(result)
                 return str(result.text)
             except Exception as exc:  # noqa: BLE001
                 last_error = exc
@@ -123,6 +155,7 @@ class GoogleTransClient:
                     src=source_lang,
                     dest=self.dest_lang,
                 )
+                result = self._resolve_maybe_awaitable(result)
                 if isinstance(result, list):
                     return [str(item.text) for item in result]
                 return [str(result.text)]
@@ -325,28 +358,31 @@ def main() -> None:
         max_chars_per_request=args.max_chars_per_request,
     )
 
-    for language in languages:
-        source_lang = LANGUAGE_TO_SOURCE_CODE.get(language, "auto")
-        language_dir = args.dataset_dir / language
-        if not language_dir.exists():
-            raise FileNotFoundError(f"Language directory not found: {language_dir}")
+    try:
+        for language in languages:
+            source_lang = LANGUAGE_TO_SOURCE_CODE.get(language, "auto")
+            language_dir = args.dataset_dir / language
+            if not language_dir.exists():
+                raise FileNotFoundError(f"Language directory not found: {language_dir}")
 
-        print(f"\nLanguage: {language} (src={source_lang} -> dest={args.destination_language})")
-        for split in splits:
-            input_path = language_dir / f"{split}.json"
-            output_path = language_dir / f"{split}_translated.json"
-            if not input_path.exists():
-                raise FileNotFoundError(f"Input file not found: {input_path}")
+            print(f"\nLanguage: {language} (src={source_lang} -> dest={args.destination_language})")
+            for split in splits:
+                input_path = language_dir / f"{split}.json"
+                output_path = language_dir / f"{split}_translated.json"
+                if not input_path.exists():
+                    raise FileNotFoundError(f"Input file not found: {input_path}")
 
-            print(f"Processing {input_path} -> {output_path}")
-            translate_file(
-                input_path=input_path,
-                output_path=output_path,
-                client=client,
-                source_lang=source_lang,
-                progress_every=args.progress_every,
-            )
-            print(f"Saved: {output_path}")
+                print(f"Processing {input_path} -> {output_path}")
+                translate_file(
+                    input_path=input_path,
+                    output_path=output_path,
+                    client=client,
+                    source_lang=source_lang,
+                    progress_every=args.progress_every,
+                )
+                print(f"Saved: {output_path}")
+    finally:
+        client.close()
 
 
 if __name__ == "__main__":

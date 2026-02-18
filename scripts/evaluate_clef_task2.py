@@ -15,6 +15,7 @@ Expected prediction JSON format (list of objects):
 `ranked_trace_indices` must be a permutation (or subset) of 0-based indices into
 `Reasoning_traces` for the corresponding claim. Metrics:
 - Recall@k on relevant traces (relevant iff Verdict_list[i] == gold claim verdict)
+- Recall@k upper bound (`min(k, |relevant|) / |relevant|`)
 - MRR@k on relevant traces
 - macro F1 and classwise F1 for claim-level verdict prediction
 """
@@ -100,6 +101,12 @@ def recall_at_k(ranked: List[int], relevant: Set[int], k: int) -> float:
     return hit / len(relevant)
 
 
+def recall_at_k_upper_bound(relevant: Set[int], k: int) -> float:
+    if not relevant:
+        return 0.0
+    return min(k, len(relevant)) / len(relevant)
+
+
 def mrr_at_k(ranked: List[int], relevant: Set[int], k: int) -> float:
     for rank, idx in enumerate(ranked[:k], start=1):
         if idx in relevant:
@@ -132,6 +139,7 @@ def evaluate(
     k: int,
 ) -> Dict[str, object]:
     ranking_recall = []
+    ranking_recall_upper_bound = []
     ranking_mrr = []
     y_true: List[str] = []
     y_pred: List[str] = []
@@ -166,6 +174,7 @@ def evaluate(
 
         relevant = {i for i, v in enumerate(claim.verdict_list) if v == claim.gold_verdict}
         ranking_recall.append(recall_at_k(filtered, relevant, k=k))
+        ranking_recall_upper_bound.append(recall_at_k_upper_bound(relevant, k=k))
         ranking_mrr.append(mrr_at_k(filtered, relevant, k=k))
 
         y_true.append(claim.gold_verdict)
@@ -178,6 +187,7 @@ def evaluate(
         "num_claims": len(claims),
         "k": k,
         "recall_at_k": safe_div(sum(ranking_recall), len(ranking_recall)),
+        "recall_at_k_upper_bound": safe_div(sum(ranking_recall_upper_bound), len(ranking_recall_upper_bound)),
         "mrr_at_k": safe_div(sum(ranking_mrr), len(ranking_mrr)),
         "macro_f1": macro_f1,
         "macro_f1_recall_at_k_mean": 0.5

@@ -2,6 +2,7 @@
   "num_claims": 11254,
   "k": 5,
   "recall_at_k": 0.18761577592644055,
+  "recall_at_k_upper_bound": 0.31507498290897906,
   "mrr_at_k": 0.6126281026005568,
   "macro_f1": 0.5018922730256401,
   "macro_f1_recall_at_k_mean": 0.3447540244760403,

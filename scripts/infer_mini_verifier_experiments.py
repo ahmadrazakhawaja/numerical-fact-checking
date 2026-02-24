@@ -151,7 +151,7 @@ def infer_ntp_mode(
                 {
                     "claim_index": claim_idx,
                     "predicted_verdict_top1": ranked_labels[0],
-                    "predicted_verdict_majority_top3": _majority_top_k(ranked_labels, k=3),
+                    "predicted_verdict_majority_top5": _majority_top_k(ranked_labels, k=5),
                     "ranked_trace_indices": [x["trace_index"] for x in trace_preds],
                     "trace_predictions": trace_preds,
                 }
@@ -220,7 +220,7 @@ def infer_classifier_mode(
                 {
                     "claim_index": claim_idx,
                     "predicted_verdict_top1": ranked_labels[0],
-                    "predicted_verdict_majority_top3": _majority_top_k(ranked_labels, k=3),
+                    "predicted_verdict_majority_top5": _majority_top_k(ranked_labels, k=5),
                     "ranked_trace_indices": [x["trace_index"] for x in trace_preds],
                     "trace_predictions": trace_preds,
                 }

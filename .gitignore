@@ -1,2 +1,5 @@
 /dataset/english/train.json
 /venv
+/checkpoints/
+/checkpoints/**
+.env

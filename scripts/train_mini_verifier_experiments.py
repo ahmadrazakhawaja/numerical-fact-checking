@@ -30,6 +30,7 @@ from mini_factcheck_common import (
     build_backbone_model,
     build_tokenizer,
     build_trace_examples,
+    login_hf_from_env,
     load_json_rows,
     resolve_base_model_id,
     save_metadata,
@@ -320,6 +321,10 @@ def main() -> None:
     args = parse_args()
     modes = validate_modes(args.modes)
     device = choose_device(args.device)
+    if login_hf_from_env():
+        print("Authenticated to Hugging Face Hub using HUGGINGFACE_HUB_TOKEN.")
+    else:
+        print("No HUGGINGFACE_HUB_TOKEN found in .env/env; proceeding unauthenticated.")
     adapter_id = args.adapter_id.strip() if args.adapter_id else None
     if adapter_id == "":
         adapter_id = None

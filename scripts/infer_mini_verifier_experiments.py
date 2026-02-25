@@ -23,6 +23,7 @@ from mini_factcheck_common import (
     build_backbone_model,
     build_tokenizer,
     build_trace_examples,
+    login_hf_from_env,
     load_json_rows,
     load_metadata,
     normalize_verdict,
@@ -246,6 +247,10 @@ def main() -> None:
     args = parse_args()
     modes = parse_modes(args.modes)
     device = choose_device(args.device)
+    if login_hf_from_env():
+        print("Authenticated to Hugging Face Hub using HUGGINGFACE_HUB_TOKEN.")
+    else:
+        print("No HUGGINGFACE_HUB_TOKEN found in .env/env; proceeding unauthenticated.")
 
     rows = load_json_rows(args.dataset_path)
     selected_rows = select_rows(rows=rows, num_claims=args.num_claims)

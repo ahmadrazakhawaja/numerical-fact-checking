@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -12,6 +13,16 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 import torch
 from torch import nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - runtime dependency check.
+    load_dotenv = None
+
+try:
+    from huggingface_hub import login as hf_login
+except ImportError:  # pragma: no cover - runtime dependency check.
+    hf_login = None
 
 try:
     from peft import PeftConfig, PeftModel
@@ -154,6 +165,32 @@ def resolve_base_model_id(explicit_base_model_id: Optional[str], adapter_id: Opt
     if not peft_cfg.base_model_name_or_path:
         raise ValueError(f"Could not resolve base model for adapter: {adapter_id}")
     return peft_cfg.base_model_name_or_path
+
+
+def login_hf_from_env(env_path: Optional[Path] = None) -> bool:
+    """Authenticate with HF Hub using HUGGINGFACE_HUB_TOKEN from .env/env."""
+    if load_dotenv is not None:
+        if env_path:
+            if env_path.exists():
+                load_dotenv(dotenv_path=env_path, override=False)
+        else:
+            repo_root = Path(__file__).resolve().parents[1]
+            default_env = repo_root / ".env"
+            if default_env.exists():
+                load_dotenv(dotenv_path=default_env, override=False)
+            # Also honor any externally configured dotenv behavior.
+            load_dotenv(override=False)
+
+    token = os.getenv("HUGGINGFACE_HUB_TOKEN") or os.getenv("HF_TOKEN")
+    if not token:
+        return False
+
+    if hf_login is None:
+        raise ImportError(
+            "huggingface_hub is not installed. Install dependencies from requirements.txt."
+        )
+    hf_login(token=token, add_to_git_credential=False)
+    return True
 
 
 def build_tokenizer(base_model_id: str, adapter_id: Optional[str]) -> AutoTokenizer:

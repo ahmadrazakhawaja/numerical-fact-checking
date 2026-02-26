@@ -214,7 +214,7 @@ def build_backbone_model(
     adapter_id: Optional[str],
     dtype: torch.dtype,
 ) -> nn.Module:
-    model = AutoModelForCausalLM.from_pretrained(base_model_id, torch_dtype=dtype)
+    model = AutoModelForCausalLM.from_pretrained(base_model_id, dtype=dtype)
     if adapter_id:
         require_dependencies_for_lora(adapter_id=adapter_id)
         model = PeftModel.from_pretrained(model, adapter_id, is_trainable=True)

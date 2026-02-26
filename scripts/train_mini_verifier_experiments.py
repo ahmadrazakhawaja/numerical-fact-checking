@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
 import torch
-from torch.optim import AdamW
+from torch.optim import AdamW, SGD
 from torch.utils.data import DataLoader, Dataset
 
 if __package__ is None or __package__ == "":
@@ -153,6 +153,8 @@ def train_ntp(
     lr: float,
     max_length: int,
     device: torch.device,
+    dtype: torch.dtype,
+    gradient_checkpointing: bool,
 ) -> Dict[str, object]:
     dataset = NTPDataset(examples=examples, tokenizer=tokenizer, max_length=max_length)
     loader = DataLoader(
@@ -162,7 +164,11 @@ def train_ntp(
         collate_fn=lambda batch: ntp_collate(batch, pad_token_id=tokenizer.pad_token_id),
     )
 
-    model = build_backbone_model(base_model_id=model_id, adapter_id=adapter_id, dtype=torch.float32)
+    model = build_backbone_model(base_model_id=model_id, adapter_id=adapter_id, dtype=dtype)
+    if hasattr(model, "config"):
+        model.config.use_cache = False
+    if gradient_checkpointing and hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable()
     model.to(device)
 
     optim = AdamW([p for p in model.parameters() if p.requires_grad], lr=lr)
@@ -201,6 +207,8 @@ def train_ntp(
         "epochs": epochs,
         "batch_size": batch_size,
         "learning_rate": lr,
+        "dtype": str(dtype),
+        "gradient_checkpointing": gradient_checkpointing,
         "epoch_loss": epoch_losses,
         "trainable_parameters": num_trainable_parameters(model),
         "total_parameters": num_total_parameters(model),
@@ -227,6 +235,9 @@ def train_classifier(
     device: torch.device,
     freeze_backbone: bool,
     num_labels: int,
+    dtype: torch.dtype,
+    gradient_checkpointing: bool,
+    optimizer_name: str,
 ) -> Dict[str, object]:
     dataset = ClassifierDataset(examples=examples, tokenizer=tokenizer, max_length=max_length)
     loader = DataLoader(
@@ -236,14 +247,28 @@ def train_classifier(
         collate_fn=lambda batch: cls_collate(batch, pad_token_id=tokenizer.pad_token_id),
     )
 
-    backbone = build_backbone_model(base_model_id=model_id, adapter_id=adapter_id, dtype=torch.float32)
+    backbone = build_backbone_model(base_model_id=model_id, adapter_id=adapter_id, dtype=dtype)
+    if hasattr(backbone, "config"):
+        backbone.config.use_cache = False
+    if gradient_checkpointing and hasattr(backbone, "gradient_checkpointing_enable"):
+        backbone.gradient_checkpointing_enable()
     for p in backbone.parameters():
         p.requires_grad = not freeze_backbone
 
     model = TraceClassifier(backbone=backbone, num_labels=num_labels)
     model.to(device)
 
-    optim = AdamW([p for p in model.parameters() if p.requires_grad], lr=lr)
+    chosen_optimizer = optimizer_name.lower().strip()
+    if chosen_optimizer == "auto":
+        chosen_optimizer = "adamw" if freeze_backbone else "sgd"
+
+    trainable_params = [p for p in model.parameters() if p.requires_grad]
+    if chosen_optimizer == "adamw":
+        optim = AdamW(trainable_params, lr=lr)
+    elif chosen_optimizer == "sgd":
+        optim = SGD(trainable_params, lr=lr)
+    else:
+        raise ValueError("Unsupported --optimizer-cls. Use one of: auto, adamw, sgd")
     model.train()
     epoch_losses: List[float] = []
     for epoch in range(epochs):
@@ -281,6 +306,9 @@ def train_classifier(
         "epochs": epochs,
         "batch_size": batch_size,
         "learning_rate": lr,
+        "dtype": str(dtype),
+        "gradient_checkpointing": gradient_checkpointing,
+        "optimizer": chosen_optimizer,
         "epoch_loss": epoch_losses,
         "trainable_parameters": num_trainable_parameters(model),
         "total_parameters": num_total_parameters(model),
@@ -306,6 +334,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-length", type=int, default=512)
     parser.add_argument("--lr-ntp", type=float, default=2e-5)
     parser.add_argument("--lr-cls", type=float, default=1e-4)
+    parser.add_argument("--dtype", choices=["auto", "float32", "float16", "bfloat16"], default="auto")
+    parser.add_argument(
+        "--optimizer-cls",
+        choices=["auto", "adamw", "sgd"],
+        default="auto",
+        help="Classifier optimizer. auto=adamw for cls_frozen, sgd for cls_unfrozen.",
+    )
+    parser.add_argument(
+        "--gradient-checkpointing",
+        action="store_true",
+        help="Enable gradient checkpointing to reduce activation memory.",
+    )
     parser.add_argument("--output-root", type=Path, default=Path("checkpoints/mini_factcheck"))
     parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
     return parser.parse_args()
@@ -329,14 +369,34 @@ def choose_device(device_arg: str) -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def choose_dtype(dtype_arg: str, device: torch.device) -> torch.dtype:
+    if dtype_arg == "float32":
+        return torch.float32
+    if dtype_arg == "float16":
+        return torch.float16
+    if dtype_arg == "bfloat16":
+        return torch.bfloat16
+
+    # auto
+    if device.type == "cuda":
+        return torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    return torch.float32
+
+
 def main() -> None:
     args = parse_args()
     modes = validate_modes(args.modes)
     device = choose_device(args.device)
+    dtype = choose_dtype(args.dtype, device)
     if login_hf_from_env():
         print("Authenticated to Hugging Face Hub using HUGGINGFACE_HUB_TOKEN.")
     else:
         print("No HUGGINGFACE_HUB_TOKEN found in .env/env; proceeding unauthenticated.")
+    print(
+        f"[config] device={device} dtype={dtype} gradient_checkpointing={args.gradient_checkpointing} "
+        f"optimizer_cls={args.optimizer_cls}",
+        flush=True,
+    )
     adapter_id = args.adapter_id.strip() if args.adapter_id else None
     if adapter_id == "":
         adapter_id = None
@@ -395,6 +455,8 @@ def main() -> None:
                     lr=args.lr_ntp,
                     max_length=args.max_length,
                     device=device,
+                    dtype=dtype,
+                    gradient_checkpointing=args.gradient_checkpointing,
                 )
             elif mode == "cls_frozen":
                 stats = train_classifier(
@@ -410,6 +472,9 @@ def main() -> None:
                     device=device,
                     freeze_backbone=True,
                     num_labels=len(label_to_id),
+                    dtype=dtype,
+                    gradient_checkpointing=args.gradient_checkpointing,
+                    optimizer_name=args.optimizer_cls,
                 )
             else:
                 stats = train_classifier(
@@ -425,6 +490,9 @@ def main() -> None:
                     device=device,
                     freeze_backbone=False,
                     num_labels=len(label_to_id),
+                    dtype=dtype,
+                    gradient_checkpointing=args.gradient_checkpointing,
+                    optimizer_name=args.optimizer_cls,
                 )
         except Exception as exc:
             save_metadata(mode_dir / "error.json", {"mode": mode, "error": str(exc)})
@@ -441,6 +509,9 @@ def main() -> None:
         "adapter_id": adapter_id,
         "modes": modes,
         "device": str(device),
+        "dtype": str(dtype),
+        "gradient_checkpointing": args.gradient_checkpointing,
+        "optimizer_cls": args.optimizer_cls,
         "num_claims": args.num_claims,
         "num_examples": len(examples),
         "label_space": sorted(label_to_id.keys()),

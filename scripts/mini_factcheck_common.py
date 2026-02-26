@@ -230,8 +230,9 @@ class TraceClassifier(nn.Module):
         hidden_size = getattr(backbone.config, "hidden_size", None)
         if hidden_size is None:
             raise ValueError("Backbone model does not expose config.hidden_size")
+        backbone_dtype = next(backbone.parameters()).dtype
         self.dropout = nn.Dropout(dropout)
-        self.classifier = nn.Linear(hidden_size, num_labels)
+        self.classifier = nn.Linear(hidden_size, num_labels, dtype=backbone_dtype)
 
     def forward(
         self,
@@ -249,6 +250,8 @@ class TraceClassifier(nn.Module):
         last_positions = attention_mask.long().sum(dim=1) - 1
         batch_idx = torch.arange(hidden.size(0), device=hidden.device)
         pooled = hidden[batch_idx, last_positions]
+        if pooled.dtype != self.classifier.weight.dtype:
+            pooled = pooled.to(self.classifier.weight.dtype)
         logits = self.classifier(self.dropout(pooled))
 
         out: Dict[str, torch.Tensor] = {"logits": logits}

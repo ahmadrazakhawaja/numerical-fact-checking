@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
 
@@ -184,7 +185,12 @@ def train_ntp(
 
             total_loss += float(loss.item())
             steps += 1
-        epoch_losses.append(total_loss / max(1, steps))
+        avg_loss = total_loss / max(1, steps)
+        epoch_losses.append(avg_loss)
+        print(
+            f"[ntp] epoch {epoch + 1}/{epochs} - steps={steps} - avg_loss={avg_loss:.6f}",
+            flush=True,
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(output_dir)
@@ -257,7 +263,13 @@ def train_classifier(
 
             total_loss += float(loss.item())
             steps += 1
-        epoch_losses.append(total_loss / max(1, steps))
+        avg_loss = total_loss / max(1, steps)
+        epoch_losses.append(avg_loss)
+        mode_name = "cls_frozen" if freeze_backbone else "cls_unfrozen"
+        print(
+            f"[{mode_name}] epoch {epoch + 1}/{epochs} - steps={steps} - avg_loss={avg_loss:.6f}",
+            flush=True,
+        )
 
     output_dir.mkdir(parents=True, exist_ok=True)
     torch.save(model.state_dict(), output_dir / "classifier.pt")
@@ -353,6 +365,7 @@ def main() -> None:
     train_summaries: List[Dict[str, object]] = []
     for mode in modes:
         mode_dir = args.output_root / mode
+        mode_dir.mkdir(parents=True, exist_ok=True)
         metadata = to_metadata_dict(
             model_id=model_id,
             adapter_id=adapter_id,
@@ -362,54 +375,65 @@ def main() -> None:
             max_traces_per_claim=args.max_traces_per_claim,
         )
         metadata["mode"] = mode
-
-        if mode == "ntp":
-            stats = train_ntp(
-                examples=examples,
-                model_id=model_id,
-                adapter_id=adapter_id,
-                output_dir=mode_dir,
-                tokenizer=tokenizer,
-                epochs=args.epochs,
-                batch_size=args.batch_size,
-                lr=args.lr_ntp,
-                max_length=args.max_length,
-                device=device,
-            )
-        elif mode == "cls_frozen":
-            stats = train_classifier(
-                examples=examples,
-                model_id=model_id,
-                adapter_id=adapter_id,
-                output_dir=mode_dir,
-                tokenizer=tokenizer,
-                epochs=args.epochs,
-                batch_size=args.batch_size,
-                lr=args.lr_cls,
-                max_length=args.max_length,
-                device=device,
-                freeze_backbone=True,
-                num_labels=len(label_to_id),
-            )
-        else:
-            stats = train_classifier(
-                examples=examples,
-                model_id=model_id,
-                adapter_id=adapter_id,
-                output_dir=mode_dir,
-                tokenizer=tokenizer,
-                epochs=args.epochs,
-                batch_size=args.batch_size,
-                lr=args.lr_cls,
-                max_length=args.max_length,
-                device=device,
-                freeze_backbone=False,
-                num_labels=len(label_to_id),
-            )
-
         save_metadata(mode_dir / "metadata.json", metadata)
+        print(
+            f"[start] mode={mode} device={device} examples={len(examples)} "
+            f"num_labels={len(label_to_id)} output_dir={mode_dir}",
+            flush=True,
+        )
+
+        try:
+            if mode == "ntp":
+                stats = train_ntp(
+                    examples=examples,
+                    model_id=model_id,
+                    adapter_id=adapter_id,
+                    output_dir=mode_dir,
+                    tokenizer=tokenizer,
+                    epochs=args.epochs,
+                    batch_size=args.batch_size,
+                    lr=args.lr_ntp,
+                    max_length=args.max_length,
+                    device=device,
+                )
+            elif mode == "cls_frozen":
+                stats = train_classifier(
+                    examples=examples,
+                    model_id=model_id,
+                    adapter_id=adapter_id,
+                    output_dir=mode_dir,
+                    tokenizer=tokenizer,
+                    epochs=args.epochs,
+                    batch_size=args.batch_size,
+                    lr=args.lr_cls,
+                    max_length=args.max_length,
+                    device=device,
+                    freeze_backbone=True,
+                    num_labels=len(label_to_id),
+                )
+            else:
+                stats = train_classifier(
+                    examples=examples,
+                    model_id=model_id,
+                    adapter_id=adapter_id,
+                    output_dir=mode_dir,
+                    tokenizer=tokenizer,
+                    epochs=args.epochs,
+                    batch_size=args.batch_size,
+                    lr=args.lr_cls,
+                    max_length=args.max_length,
+                    device=device,
+                    freeze_backbone=False,
+                    num_labels=len(label_to_id),
+                )
+        except Exception as exc:
+            save_metadata(mode_dir / "error.json", {"mode": mode, "error": str(exc)})
+            print(f"[error] mode={mode} failed: {exc}", file=sys.stderr, flush=True)
+            raise
+
         save_metadata(mode_dir / "train_stats.json", stats)
         train_summaries.append(stats)
+        print(f"[done] mode={mode} saved stats to {mode_dir / 'train_stats.json'}", flush=True)
 
     summary = {
         "checkpoint_root": str(args.output_root),

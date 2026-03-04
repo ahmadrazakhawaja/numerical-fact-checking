@@ -1,0 +1,2250 @@
+{
+  "dataset_path": "dataset/english/train.json",
+  "num_claims": 5,
+  "max_traces_per_claim": 20,
+  "checkpoint_root": "checkpoints/mini_factcheck",
+  "device": "cuda",
+  "modes": {
+    "ntp": [
+      {
+        "claim_index": 0,
+        "predicted_verdict_top1": "true",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          6,
+          0,
+          4,
+          17,
+          13,
+          3,
+          11,
+          1,
+          14,
+          18,
+          5,
+          16,
+          15,
+          10,
+          7,
+          19,
+          9,
+          12,
+          2,
+          8
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 6,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.9807032346725464
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9701982736587524
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.9549437761306763
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9536937475204468
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9526842832565308
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9404798150062561
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9118801355361938
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.8259604573249817
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.7312988042831421
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.7274652123451233
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.6988410353660583
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.6848101615905762
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.644845187664032
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.589390754699707
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.5597264766693115
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.5419711470603943
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.5324321985244751
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.5254276394844055
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.4960803687572479
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "false",
+            "score": 0.4920209050178528
+          }
+        ]
+      },
+      {
+        "claim_index": 1,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          2,
+          6,
+          19,
+          18,
+          10,
+          4,
+          12,
+          13,
+          8,
+          9,
+          3,
+          0,
+          17,
+          7,
+          15,
+          1,
+          14,
+          11,
+          16,
+          5
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9907653331756592
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9899809956550598
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9899277091026306
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9880010485649109
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9851300716400146
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9804651737213135
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.978008508682251
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9744418263435364
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9683900475502014
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9658137559890747
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.964190661907196
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9578592777252197
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9445434808731079
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9443901777267456
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.8632817268371582
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.8519283533096313
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.8251297473907471
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.8175767660140991
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.7991015315055847
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.789689838886261
+          }
+        ]
+      },
+      {
+        "claim_index": 2,
+        "predicted_verdict_top1": "true",
+        "predicted_verdict_majority_top5": "true",
+        "ranked_trace_indices": [
+          1,
+          18,
+          0,
+          10,
+          16,
+          17,
+          3,
+          12,
+          19,
+          5,
+          11,
+          13,
+          15,
+          9,
+          7,
+          6,
+          8,
+          2,
+          14,
+          4
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 1,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9942830204963684
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9936577677726746
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9919176697731018
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9918797612190247
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9916971921920776
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9916226267814636
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9916016459465027
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9915423393249512
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9913690686225891
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9913683533668518
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9903941750526428
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9902442693710327
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9901754260063171
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9901567697525024
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9899747967720032
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9897465705871582
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9893360137939453
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9863594174385071
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9817700982093811
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9795373678207397
+          }
+        ]
+      },
+      {
+        "claim_index": 3,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          3,
+          0,
+          18,
+          7,
+          5,
+          9,
+          11,
+          14,
+          17,
+          13,
+          16,
+          4,
+          8,
+          19,
+          15,
+          1,
+          12,
+          2,
+          10,
+          6
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9981498718261719
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9976588487625122
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9975547194480896
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9972952008247375
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9964465498924255
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9952298402786255
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9931570887565613
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9930561184883118
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9929543137550354
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9904104471206665
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9900016784667969
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9888660311698914
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9876004457473755
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9874946475028992
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.98747718334198
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9867241978645325
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9852028489112854
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9825016856193542
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9733514189720154
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.963808536529541
+          }
+        ]
+      },
+      {
+        "claim_index": 4,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          9,
+          14,
+          5,
+          0,
+          15,
+          4,
+          13,
+          19,
+          10,
+          2,
+          12,
+          1,
+          11,
+          6,
+          16,
+          8,
+          3,
+          7,
+          17,
+          18
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9941326975822449
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9920750856399536
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9917769432067871
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9894146919250488
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9861218333244324
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9825312495231628
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9813035726547241
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9809504747390747
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.980905294418335
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9804835319519043
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9760152697563171
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9745910167694092
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9726449251174927
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9710382223129272
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9693295359611511
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9683876633644104
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.967451810836792
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9647044539451599
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9584784507751465
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9306174516677856
+          }
+        ]
+      }
+    ],
+    "cls_frozen": [
+      {
+        "claim_index": 0,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          4,
+          2,
+          3,
+          17,
+          16,
+          8,
+          13,
+          1,
+          12,
+          14,
+          18,
+          19,
+          10,
+          7,
+          15,
+          6,
+          11,
+          0,
+          9,
+          5
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999961853027344
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999732971191406
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999685287475586
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999606609344482
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999487400054932
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999401569366455
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999399185180664
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999395608901978
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999369382858276
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.999863862991333
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9997883439064026
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9993560910224915
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9989551305770874
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9986181259155273
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9964319467544556
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9961650371551514
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9953946471214294
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9926043748855591
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9838465452194214
+          }
+        ]
+      },
+      {
+        "claim_index": 1,
+        "predicted_verdict_top1": "conflicting",
+        "predicted_verdict_majority_top5": "conflicting",
+        "ranked_trace_indices": [
+          7,
+          0,
+          3,
+          9,
+          14,
+          5,
+          2,
+          13,
+          11,
+          1,
+          16,
+          12,
+          8,
+          18,
+          4,
+          10,
+          17,
+          15,
+          19,
+          6
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 7,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9986392855644226
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9942644238471985
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9926363229751587
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.992603600025177
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.991976797580719
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9917160868644714
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9905010461807251
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "false",
+            "score": 0.9864146113395691
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9850038290023804
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9828989505767822
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9785464406013489
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.978236734867096
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9771501421928406
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "false",
+            "score": 0.9770379066467285
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.974773108959198
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9702035784721375
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9672890305519104
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9657163023948669
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9424520134925842
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "false",
+            "score": 0.904620885848999
+          }
+        ]
+      },
+      {
+        "claim_index": 2,
+        "predicted_verdict_top1": "true",
+        "predicted_verdict_majority_top5": "true",
+        "ranked_trace_indices": [
+          19,
+          5,
+          13,
+          3,
+          7,
+          8,
+          15,
+          18,
+          12,
+          16,
+          17,
+          9,
+          10,
+          0,
+          4,
+          2,
+          14,
+          6,
+          1,
+          11
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 19,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9950395226478577
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9931117296218872
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9916292428970337
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9914652705192566
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9912493228912354
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9910048246383667
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9908520579338074
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9899755120277405
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9876521825790405
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9875280261039734
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9850685000419617
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9844188690185547
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9839531779289246
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9821155071258545
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9779183268547058
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9721096158027649
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.9711737036705017
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.964361310005188
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.960338294506073
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "true",
+            "gold_trace_verdict": "true",
+            "score": 0.95372474193573
+          }
+        ]
+      },
+      {
+        "claim_index": 3,
+        "predicted_verdict_top1": "conflicting",
+        "predicted_verdict_majority_top5": "conflicting",
+        "ranked_trace_indices": [
+          4,
+          12,
+          16,
+          6,
+          10,
+          18,
+          17,
+          8,
+          1,
+          19,
+          15,
+          9,
+          2,
+          14,
+          11,
+          13,
+          0,
+          3,
+          7,
+          5
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 4,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9995972514152527
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9993484616279602
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9989848732948303
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9986945986747742
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9983080625534058
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9961198568344116
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9919235110282898
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9893955588340759
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9892297387123108
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.982328474521637
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9820330739021301
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9801056981086731
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.9750267863273621
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9556735157966614
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.94161456823349
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9321213364601135
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "false",
+            "score": 0.8612228035926819
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "conflicting",
+            "score": 0.85129714012146
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "conflicting",
+            "gold_trace_verdict": "false",
+            "score": 0.7435845732688904
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.5674312114715576
+          }
+        ]
+      },
+      {
+        "claim_index": 4,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          13,
+          7,
+          4,
+          8,
+          17,
+          18,
+          3,
+          19,
+          15,
+          14,
+          6,
+          11,
+          2,
+          12,
+          16,
+          1,
+          0,
+          5,
+          9,
+          10
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999302625656128
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9999297857284546
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9998805522918701
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9998195767402649
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9998038411140442
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9997380375862122
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.999671459197998
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9993512034416199
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9988786578178406
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9987906813621521
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9987189769744873
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.998623251914978
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9982522130012512
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9979442954063416
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9974814057350159
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9970327615737915
+          },
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9963017702102661
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9957466721534729
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9950433969497681
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 0.9920467138290405
+          }
+        ]
+      }
+    ],
+    "cls_unfrozen": [
+      {
+        "claim_index": 0,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          }
+        ]
+      },
+      {
+        "claim_index": 1,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          }
+        ]
+      },
+      {
+        "claim_index": 2,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "true",
+            "score": 1.0
+          }
+        ]
+      },
+      {
+        "claim_index": 3,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "conflicting",
+            "score": 1.0
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          }
+        ]
+      },
+      {
+        "claim_index": 4,
+        "predicted_verdict_top1": "false",
+        "predicted_verdict_majority_top5": "false",
+        "ranked_trace_indices": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ],
+        "trace_predictions": [
+          {
+            "trace_index": 0,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 1,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 2,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 3,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 4,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 5,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 6,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 7,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 8,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 9,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 10,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 11,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 12,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 13,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 14,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 15,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 16,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 17,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 18,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          },
+          {
+            "trace_index": 19,
+            "predicted_verdict": "false",
+            "gold_trace_verdict": "false",
+            "score": 1.0
+          }
+        ]
+      }
+    ]
+  }
+}

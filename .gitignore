@@ -3,3 +3,7 @@
 /checkpoints/
 /checkpoints/**
 .env
+hf
+gpu_test.out
+gpu_test.err
+

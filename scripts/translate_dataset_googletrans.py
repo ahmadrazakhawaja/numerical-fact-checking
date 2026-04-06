@@ -316,6 +316,15 @@ def main() -> None:
         help="Destination language code for googletrans.",
     )
     parser.add_argument(
+        "--output-suffix",
+        type=str,
+        default="_translated",
+        help=(
+            "Suffix inserted after the split name when writing outputs. "
+            "For example, '_spanish_translated' produces 'train_spanish_translated.json'."
+        ),
+    )
+    parser.add_argument(
         "--batch-size",
         type=int,
         default=16,
@@ -368,7 +377,7 @@ def main() -> None:
             print(f"\nLanguage: {language} (src={source_lang} -> dest={args.destination_language})")
             for split in splits:
                 input_path = language_dir / f"{split}.json"
-                output_path = language_dir / f"{split}_translated.json"
+                output_path = language_dir / f"{split}{args.output_suffix}.json"
                 if not input_path.exists():
                     raise FileNotFoundError(f"Input file not found: {input_path}")
 

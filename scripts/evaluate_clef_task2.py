@@ -67,19 +67,41 @@ def build_claim_record(language: str, dataset_index: int, row: dict) -> ClaimRec
     )
 
 
-def load_claims(dataset_dir: Path, split: str, languages: Iterable[str]) -> Dict[Tuple[str, int], ClaimRecord]:
+def subset_rows(rows: List[dict], start_index: int, limit: Optional[int]) -> List[dict]:
+    if start_index < 0:
+        raise ValueError(f"start_index must be >= 0, got {start_index}")
+    sliced = rows[start_index:]
+    if limit is not None:
+        if limit < 0:
+            raise ValueError(f"limit must be >= 0, got {limit}")
+        sliced = sliced[:limit]
+    return sliced
+
+
+def load_claims(
+    dataset_dir: Path,
+    split: str,
+    languages: Iterable[str],
+    start_index: int = 0,
+    limit: Optional[int] = None,
+) -> Dict[Tuple[str, int], ClaimRecord]:
     claims: Dict[Tuple[str, int], ClaimRecord] = {}
     for language in languages:
-        rows = load_dataset_rows(dataset_dir, split, language)
-        for idx, row in enumerate(rows):
+        rows = subset_rows(load_dataset_rows(dataset_dir, split, language), start_index=start_index, limit=limit)
+        for idx, row in enumerate(rows, start=start_index):
             claims[(language, idx)] = build_claim_record(language=language, dataset_index=idx, row=row)
     return claims
 
 
-def load_claims_from_file(dataset_path: Path, language_name: str) -> Dict[Tuple[str, int], ClaimRecord]:
+def load_claims_from_file(
+    dataset_path: Path,
+    language_name: str,
+    start_index: int = 0,
+    limit: Optional[int] = None,
+) -> Dict[Tuple[str, int], ClaimRecord]:
     claims: Dict[Tuple[str, int], ClaimRecord] = {}
-    rows = load_json_rows(dataset_path)
-    for idx, row in enumerate(rows):
+    rows = subset_rows(load_json_rows(dataset_path), start_index=start_index, limit=limit)
+    for idx, row in enumerate(rows, start=start_index):
         claims[(language_name, idx)] = build_claim_record(language=language_name, dataset_index=idx, row=row)
     return claims
 
@@ -92,14 +114,27 @@ def evaluate_predictions_against_dataset(
     languages: Optional[Iterable[str]] = None,
     dataset_path: Optional[Path] = None,
     language_name: Optional[str] = None,
+    start_index: int = 0,
+    limit: Optional[int] = None,
 ) -> Dict[str, object]:
     if dataset_path is not None:
         resolved_language = language_name or infer_language_name(dataset_path)
-        claims = load_claims_from_file(dataset_path, resolved_language)
+        claims = load_claims_from_file(
+            dataset_path,
+            resolved_language,
+            start_index=start_index,
+            limit=limit,
+        )
     else:
         if dataset_dir is None or split is None:
             raise ValueError("dataset_dir and split are required when dataset_path is not provided.")
-        claims = load_claims(dataset_dir, split, languages or DEFAULT_LANGS)
+        claims = load_claims(
+            dataset_dir,
+            split,
+            languages or DEFAULT_LANGS,
+            start_index=start_index,
+            limit=limit,
+        )
 
     preds = load_predictions(predictions_path)
     return evaluate(claims, preds, k=k)
@@ -244,6 +279,8 @@ def main() -> None:
     parser.add_argument("--split", type=str, default="validation", choices=["train", "validation"])
     parser.add_argument("--predictions", type=Path, required=True, help="Path to predictions JSON.")
     parser.add_argument("--k", type=int, default=5, help="k for Recall@k and MRR@k.")
+    parser.add_argument("--start-index", type=int, default=0, help="Optional dataset row offset for subset evaluation.")
+    parser.add_argument("--limit", type=int, default=None, help="Optional number of dataset rows to evaluate.")
     parser.add_argument(
         "--languages",
         type=str,
@@ -263,6 +300,8 @@ def main() -> None:
         languages=languages,
         dataset_path=args.dataset_path,
         language_name=args.language_name,
+        start_index=args.start_index,
+        limit=args.limit,
     )
 
     print(json.dumps(metrics, indent=2, ensure_ascii=False))

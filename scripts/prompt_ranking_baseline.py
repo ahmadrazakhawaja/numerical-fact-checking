@@ -387,6 +387,8 @@ def main() -> None:
             k=args.eval_k,
             dataset_path=args.dataset_path,
             language_name=language_name,
+            start_index=args.start_index,
+            limit=args.limit,
         )
         eval_output = args.eval_output
         if eval_output is not None:

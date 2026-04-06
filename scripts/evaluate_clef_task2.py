@@ -26,7 +26,7 @@ import argparse
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 
 DEFAULT_LANGS = ("english", "spanish", "arabic")
@@ -53,12 +53,27 @@ class PredictionRecord:
     predicted_verdict: str
 
 
+def load_rows(path: Path) -> List[dict]:
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def infer_language_name(dataset_path: Path) -> str:
+    parent = dataset_path.parent.name.strip().lower()
+    stem = dataset_path.stem.strip().lower()
+    if parent and parent != "dataset":
+        if stem.endswith("_translated"):
+            return f"{parent}_translated"
+        if stem in {"train", "validation", "test"}:
+            return parent
+    return stem
+
+
 def load_claims(dataset_dir: Path, split: str, languages: Iterable[str]) -> Dict[Tuple[str, int], ClaimRecord]:
     claims: Dict[Tuple[str, int], ClaimRecord] = {}
     for language in languages:
         path = dataset_dir / language / f"{split}.json"
-        with path.open("r", encoding="utf-8") as f:
-            rows = json.load(f)
+        rows = load_rows(path)
         for idx, row in enumerate(rows):
             verdict_list = [normalize_label(v) for v in row.get("Verdict_list", [])]
             gold_verdict = normalize_label(row.get("label", ""))
@@ -71,6 +86,44 @@ def load_claims(dataset_dir: Path, split: str, languages: Iterable[str]) -> Dict
                 num_traces=num_traces,
             )
     return claims
+
+
+def load_claims_from_file(dataset_path: Path, language_name: str) -> Dict[Tuple[str, int], ClaimRecord]:
+    claims: Dict[Tuple[str, int], ClaimRecord] = {}
+    rows = load_rows(dataset_path)
+    for idx, row in enumerate(rows):
+        verdict_list = [normalize_label(v) for v in row.get("Verdict_list", [])]
+        gold_verdict = normalize_label(row.get("label", ""))
+        num_traces = len(row.get("Reasoning_traces", []))
+        claims[(language_name, idx)] = ClaimRecord(
+            language=language_name,
+            dataset_index=idx,
+            gold_verdict=gold_verdict,
+            verdict_list=verdict_list,
+            num_traces=num_traces,
+        )
+    return claims
+
+
+def evaluate_predictions_against_dataset(
+    predictions_path: Path,
+    k: int,
+    dataset_dir: Optional[Path] = None,
+    split: Optional[str] = None,
+    languages: Optional[Iterable[str]] = None,
+    dataset_path: Optional[Path] = None,
+    language_name: Optional[str] = None,
+) -> Dict[str, object]:
+    if dataset_path is not None:
+        resolved_language = language_name or infer_language_name(dataset_path)
+        claims = load_claims_from_file(dataset_path, resolved_language)
+    else:
+        if dataset_dir is None or split is None:
+            raise ValueError("dataset_dir and split are required when dataset_path is not provided.")
+        claims = load_claims(dataset_dir, split, languages or DEFAULT_LANGS)
+
+    preds = load_predictions(predictions_path)
+    return evaluate(claims, preds, k=k)
 
 
 def load_predictions(path: Path) -> Dict[Tuple[str, int], PredictionRecord]:
@@ -201,6 +254,18 @@ def evaluate(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate CLEF Task 2 predictions.")
     parser.add_argument("--dataset-dir", type=Path, default=Path("dataset"), help="Path to dataset root.")
+    parser.add_argument(
+        "--dataset-path",
+        type=Path,
+        default=None,
+        help="Optional path to a single dataset JSON file. Useful for translated variants.",
+    )
+    parser.add_argument(
+        "--language-name",
+        type=str,
+        default=None,
+        help="Language identifier to use with --dataset-path. Defaults to an inferred name.",
+    )
     parser.add_argument("--split", type=str, default="validation", choices=["train", "validation"])
     parser.add_argument("--predictions", type=Path, required=True, help="Path to predictions JSON.")
     parser.add_argument("--k", type=int, default=5, help="k for Recall@k and MRR@k.")
@@ -215,9 +280,15 @@ def main() -> None:
     args = parser.parse_args()
 
     languages = [x.strip().lower() for x in args.languages]
-    claims = load_claims(args.dataset_dir, args.split, languages)
-    preds = load_predictions(args.predictions)
-    metrics = evaluate(claims, preds, k=args.k)
+    metrics = evaluate_predictions_against_dataset(
+        predictions_path=args.predictions,
+        k=args.k,
+        dataset_dir=args.dataset_dir,
+        split=args.split,
+        languages=languages,
+        dataset_path=args.dataset_path,
+        language_name=args.language_name,
+    )
 
     print(json.dumps(metrics, indent=2, ensure_ascii=False))
 

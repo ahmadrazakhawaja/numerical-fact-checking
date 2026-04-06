@@ -1,0 +1,42 @@
+{
+  "prediction_files": [
+    "results/prompt_baseline_arabic_val_10.json",
+    "results/prompt_baseline_arabic_val_translated_10.json"
+  ],
+  "variant_names": [
+    "arabic",
+    "arabic_translated"
+  ],
+  "group_key": "group_id",
+  "fallback_group_key": "dataset_index",
+  "top_k": 5,
+  "num_variants": 2,
+  "num_complete_groups": 10,
+  "duplicate_group_rows": {
+    "arabic": 0,
+    "arabic_translated": 0
+  },
+  "verdict_agreement": {
+    "raw_complete_agreement": 0.9,
+    "fleiss_kappa": 0.8290598290598291,
+    "krippendorff_alpha_nominal": 0.829059829059829,
+    "pairwise": {
+      "arabic__vs__arabic_translated": {
+        "num_groups": 10,
+        "raw_agreement": 0.9,
+        "cohen_kappa": 0.8305084745762712
+      }
+    }
+  },
+  "ranking_consistency": {
+    "pairwise": {
+      "arabic__vs__arabic_translated": {
+        "num_groups": 10,
+        "mean_kendall_tau": 0.8947368421052632,
+        "mean_spearman_rho": 0.9198496240601504,
+        "mean_top_k_jaccard": 0.9666666666666666,
+        "mean_common_items": 20.0
+      }
+    }
+  }
+}

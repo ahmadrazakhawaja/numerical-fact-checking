@@ -19,17 +19,16 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import torch
-from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from evaluate_clef_task2 import evaluate_predictions_against_dataset, infer_language_name
+try:
+    from evaluate_clef_task2 import evaluate_predictions_against_dataset
+    from task2_utils import infer_language_name, load_json_rows, normalize_label
+except ImportError:  # pragma: no cover - import path fallback
+    from scripts.evaluate_clef_task2 import evaluate_predictions_against_dataset
+    from scripts.task2_utils import infer_language_name, load_json_rows, normalize_label
 
 
 DEFAULT_MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.3"
-
-
-def normalize_label(label: str) -> str:
-    return str(label).strip().lower()
 
 
 def resolve_dtype(name: str):
@@ -258,6 +257,9 @@ def infer_output_language(dataset_path: Path, override: Optional[str]) -> str:
 
 
 def main() -> None:
+    from tqdm import tqdm
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
     parser = argparse.ArgumentParser(description="Prompted ranking baseline for CLEF Task 2.")
     parser.add_argument("--dataset-path", type=Path, required=True, help="Path to a dataset JSON file.")
     parser.add_argument("--model-id", type=str, default=DEFAULT_MODEL_ID)
@@ -294,7 +296,7 @@ def main() -> None:
 
     set_seed(args.seed)
 
-    rows = json.load(args.dataset_path.open("r", encoding="utf-8"))
+    rows = load_json_rows(args.dataset_path)
     selected_rows = rows[args.start_index :]
     if args.limit is not None:
         selected_rows = selected_rows[: args.limit]

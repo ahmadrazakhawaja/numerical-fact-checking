@@ -28,12 +28,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
+try:
+    from task2_utils import infer_language_name, load_dataset_rows, load_json_rows, normalize_label, safe_div
+except ImportError:  # pragma: no cover - import path fallback
+    from scripts.task2_utils import infer_language_name, load_dataset_rows, load_json_rows, normalize_label, safe_div
+
 
 DEFAULT_LANGS = ("english", "spanish", "arabic")
-
-
-def normalize_label(label: str) -> str:
-    return str(label).strip().lower()
 
 
 @dataclass
@@ -53,55 +54,33 @@ class PredictionRecord:
     predicted_verdict: str
 
 
-def load_rows(path: Path) -> List[dict]:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def infer_language_name(dataset_path: Path) -> str:
-    parent = dataset_path.parent.name.strip().lower()
-    stem = dataset_path.stem.strip().lower()
-    if parent and parent != "dataset":
-        if stem.endswith("_translated"):
-            return f"{parent}_translated"
-        if stem in {"train", "validation", "test"}:
-            return parent
-    return stem
+def build_claim_record(language: str, dataset_index: int, row: dict) -> ClaimRecord:
+    verdict_list = [normalize_label(v) for v in row.get("Verdict_list", [])]
+    gold_verdict = normalize_label(row.get("label", ""))
+    num_traces = len(row.get("Reasoning_traces", []))
+    return ClaimRecord(
+        language=language,
+        dataset_index=dataset_index,
+        gold_verdict=gold_verdict,
+        verdict_list=verdict_list,
+        num_traces=num_traces,
+    )
 
 
 def load_claims(dataset_dir: Path, split: str, languages: Iterable[str]) -> Dict[Tuple[str, int], ClaimRecord]:
     claims: Dict[Tuple[str, int], ClaimRecord] = {}
     for language in languages:
-        path = dataset_dir / language / f"{split}.json"
-        rows = load_rows(path)
+        rows = load_dataset_rows(dataset_dir, split, language)
         for idx, row in enumerate(rows):
-            verdict_list = [normalize_label(v) for v in row.get("Verdict_list", [])]
-            gold_verdict = normalize_label(row.get("label", ""))
-            num_traces = len(row.get("Reasoning_traces", []))
-            claims[(language, idx)] = ClaimRecord(
-                language=language,
-                dataset_index=idx,
-                gold_verdict=gold_verdict,
-                verdict_list=verdict_list,
-                num_traces=num_traces,
-            )
+            claims[(language, idx)] = build_claim_record(language=language, dataset_index=idx, row=row)
     return claims
 
 
 def load_claims_from_file(dataset_path: Path, language_name: str) -> Dict[Tuple[str, int], ClaimRecord]:
     claims: Dict[Tuple[str, int], ClaimRecord] = {}
-    rows = load_rows(dataset_path)
+    rows = load_json_rows(dataset_path)
     for idx, row in enumerate(rows):
-        verdict_list = [normalize_label(v) for v in row.get("Verdict_list", [])]
-        gold_verdict = normalize_label(row.get("label", ""))
-        num_traces = len(row.get("Reasoning_traces", []))
-        claims[(language_name, idx)] = ClaimRecord(
-            language=language_name,
-            dataset_index=idx,
-            gold_verdict=gold_verdict,
-            verdict_list=verdict_list,
-            num_traces=num_traces,
-        )
+        claims[(language_name, idx)] = build_claim_record(language=language_name, dataset_index=idx, row=row)
     return claims
 
 
@@ -165,10 +144,6 @@ def mrr_at_k(ranked: List[int], relevant: Set[int], k: int) -> float:
         if idx in relevant:
             return 1.0 / rank
     return 0.0
-
-
-def safe_div(n: float, d: float) -> float:
-    return n / d if d else 0.0
 
 
 def f1_scores(y_true: List[str], y_pred: List[str], labels: List[str]) -> Tuple[float, Dict[str, float]]:

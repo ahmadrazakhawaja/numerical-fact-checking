@@ -19,24 +19,19 @@ import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Set
 
+try:
+    from task2_utils import load_dataset_rows, normalize_label
+except ImportError:  # pragma: no cover - import path fallback
+    from scripts.task2_utils import load_dataset_rows, normalize_label
+
 
 DEFAULT_LANGS = ("english", "spanish", "arabic")
-
-
-def normalize_label(label: str) -> str:
-    return str(label).strip().lower()
-
-
-def load_rows(dataset_dir: Path, split: str, language: str) -> List[dict]:
-    path = dataset_dir / language / f"{split}.json"
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 
 def collect_train_label_space(dataset_dir: Path, languages: Iterable[str]) -> Set[str]:
     labels: Set[str] = set()
     for lang in languages:
-        for row in load_rows(dataset_dir, "train", lang):
+        for row in load_dataset_rows(dataset_dir, "train", lang):
             labels.add(normalize_label(row.get("verdict", "")))
     return labels
 
@@ -71,7 +66,7 @@ def build_predictions(
     predictions: List[dict] = []
 
     for lang in languages:
-        rows = load_rows(dataset_dir, target_split, lang)
+        rows = load_dataset_rows(dataset_dir, target_split, lang)
         for idx, row in enumerate(rows):
             num_traces = len(row.get("Reasoning_traces", []))
             verdict_list = row.get("Verdict_list", [])

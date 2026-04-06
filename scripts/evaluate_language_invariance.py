@@ -13,18 +13,10 @@ from itertools import combinations
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
-
-def normalize_label(label: str) -> str:
-    return str(label).strip().lower()
-
-
-def safe_div(numerator: float, denominator: float) -> float:
-    return numerator / denominator if denominator else 0.0
-
-
-def load_predictions(path: Path) -> List[dict]:
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+try:
+    from task2_utils import load_json_rows, normalize_label, safe_div
+except ImportError:  # pragma: no cover - import path fallback
+    from scripts.task2_utils import load_json_rows, normalize_label, safe_div
 
 
 def resolve_variant_names(paths: Sequence[Path], override_names: Optional[Sequence[str]]) -> List[str]:
@@ -227,7 +219,7 @@ def build_complete_groups(
     duplicates = {name: 0 for name in variant_names}
 
     for path, name in zip(prediction_paths, variant_names):
-        for row in load_predictions(path):
+        for row in load_json_rows(path):
             group_id = resolve_group_id(row, group_key=group_key, fallback_group_key=fallback_group_key)
             if group_id is None:
                 continue

@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Prompted ranking baseline using a frozen instruction-tuned causal LM.
-
-This script loads a single dataset JSON file, prompts the model to:
-1) rank the candidate reasoning traces from best to worst, and
-2) predict the final claim verdict.
-
-Predictions are written in the same schema expected by `evaluate_clef_task2.py`.
-"""
+"""Run inference with a trained SFT + LoRA adapter for CLEF Task 2."""
 
 from __future__ import annotations
 
@@ -14,6 +7,8 @@ import argparse
 import json
 from pathlib import Path
 from typing import List, Optional
+
+import torch
 
 try:
     from evaluate_clef_task2 import evaluate_predictions_against_dataset
@@ -48,27 +43,19 @@ def infer_output_language(dataset_path: Path, override: Optional[str]) -> str:
 
 
 def main() -> None:
+    from peft import PeftModel
     from tqdm import tqdm
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    parser = argparse.ArgumentParser(description="Prompted ranking baseline for CLEF Task 2.")
-    parser.add_argument("--dataset-path", type=Path, required=True, help="Path to a dataset JSON file.")
+    parser = argparse.ArgumentParser(description="Run inference with a trained SFT + LoRA adapter.")
+    parser.add_argument("--dataset-path", type=Path, required=True)
+    parser.add_argument("--adapter-path", type=Path, required=True)
     parser.add_argument("--model-id", type=str, default=DEFAULT_MODEL_ID)
-    parser.add_argument("--output", type=Path, required=True, help="Path to save predictions JSON.")
-    parser.add_argument(
-        "--language-name",
-        type=str,
-        default=None,
-        help="Language identifier stored in prediction records. Defaults to an inferred name.",
-    )
-    parser.add_argument(
-        "--variant-name",
-        type=str,
-        default=None,
-        help="Optional variant name for metadata. Defaults to the dataset file stem.",
-    )
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--language-name", type=str, default=None)
+    parser.add_argument("--variant-name", type=str, default=None)
     parser.add_argument("--start-index", type=int, default=0)
-    parser.add_argument("--limit", type=int, default=None, help="Optional number of examples to run.")
+    parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--max-evidence-items", type=int, default=3)
     parser.add_argument("--max-evidence-chars", type=int, default=1200)
@@ -80,13 +67,12 @@ def main() -> None:
     parser.add_argument("--top-p", type=float, default=1.0)
     parser.add_argument("--do-sample", action="store_true")
     parser.add_argument("--save-debug-fields", action="store_true")
-    parser.add_argument("--evaluate", action="store_true", help="Run CLEF metric evaluation after prediction.")
+    parser.add_argument("--evaluate", action="store_true")
     parser.add_argument("--eval-k", type=int, default=5)
     parser.add_argument("--eval-output", type=Path, default=None)
     args = parser.parse_args()
 
     set_seed(args.seed)
-
     rows = load_json_rows(args.dataset_path)
     selected_rows = rows[args.start_index :]
     if args.limit is not None:
@@ -94,23 +80,23 @@ def main() -> None:
 
     label_space = infer_label_space(rows)
     language_name = infer_output_language(args.dataset_path, args.language_name)
-    variant_name = args.variant_name or args.dataset_path.stem
+    variant_name = args.variant_name or args.adapter_path.name
 
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = AutoModelForCausalLM.from_pretrained(
+    base_model = AutoModelForCausalLM.from_pretrained(
         args.model_id,
         torch_dtype=resolve_dtype(args.dtype),
         device_map=args.device_map,
     )
+    model = PeftModel.from_pretrained(base_model, str(args.adapter_path))
     model.eval()
 
-    do_sample = args.do_sample or args.temperature > 0.0
     predictions: List[dict] = []
-
-    for local_offset, row in enumerate(tqdm(selected_rows, desc="Running prompted baseline")):
+    do_sample = args.do_sample or args.temperature > 0.0
+    for local_offset, row in enumerate(tqdm(selected_rows, desc="Running SFT LoRA inference")):
         dataset_index = args.start_index + local_offset
         num_traces = len(row.get("Reasoning_traces", []) or [])
 
@@ -131,7 +117,6 @@ def main() -> None:
             top_p=args.top_p,
         )
         parsed = parse_response(raw_output, label_space=label_space, num_traces=num_traces)
-
         record = {
             "language": language_name,
             "dataset_index": dataset_index,
@@ -159,6 +144,7 @@ def main() -> None:
         json.dumps(
             {
                 "saved_predictions": str(args.output),
+                "adapter_path": str(args.adapter_path),
                 "model_id": args.model_id,
                 "dataset_path": str(args.dataset_path),
                 "language_name": language_name,
@@ -181,10 +167,9 @@ def main() -> None:
             start_index=args.start_index,
             limit=args.limit,
         )
-        eval_output = args.eval_output
-        if eval_output is not None:
-            eval_output.parent.mkdir(parents=True, exist_ok=True)
-            with eval_output.open("w", encoding="utf-8") as f:
+        if args.eval_output is not None:
+            args.eval_output.parent.mkdir(parents=True, exist_ok=True)
+            with args.eval_output.open("w", encoding="utf-8") as f:
                 json.dump(metrics, f, indent=2, ensure_ascii=False)
         print(json.dumps(metrics, indent=2, ensure_ascii=False))
 

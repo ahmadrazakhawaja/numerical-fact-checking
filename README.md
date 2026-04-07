@@ -1,6 +1,56 @@
 # Numerical fact checking
 
-## Mini verifier experiments (5-sample setup)
+## English SFT + LoRA
+
+Train an English-only SFT adapter on `Mistral-7B-Instruct-v0.3`:
+
+```bash
+python scripts/train_english_sft_lora.py \
+  --train-dataset dataset/english/train.json \
+  --validation-dataset dataset/english/validation.json \
+  --output-dir checkpoints/english_sft_lora \
+  --gradient-checkpointing
+```
+
+Run inference from the saved adapter:
+
+```bash
+python scripts/infer_sft_lora.py \
+  --dataset-path dataset/english/validation.json \
+  --language-name english \
+  --adapter-path checkpoints/english_sft_lora/final_adapter \
+  --output results/english_sft_lora_validation_predictions.json \
+  --evaluate \
+  --eval-output results/english_sft_lora_validation_eval.json
+```
+
+Quick debug run on a small subset:
+
+```bash
+python scripts/train_english_sft_lora.py \
+  --train-dataset dataset/english/train.json \
+  --validation-dataset dataset/english/validation.json \
+  --output-dir checkpoints/english_sft_lora_debug \
+  --limit-train 32 \
+  --limit-validation 16 \
+  --gradient-checkpointing
+```
+
+## Prompted Baseline
+
+Run the frozen prompted baseline on a small validation subset:
+
+```bash
+python scripts/prompt_ranking_baseline.py \
+  --dataset-path dataset/english/validation.json \
+  --language-name english \
+  --output results/prompt_baseline_english_val_10.json \
+  --limit 10 \
+  --evaluate \
+  --eval-output results/prompt_baseline_english_val_10_eval.json
+```
+
+## Mini verifier experiments (legacy 5-sample setup)
 
 Train the 3 requested settings on `dataset/english/train.json`:
 

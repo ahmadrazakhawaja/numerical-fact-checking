@@ -4,7 +4,7 @@
 #SBATCH -p scc-gpu
 #SBATCH -G A100:4
 #SBATCH -C inet
-#SBATCH --time=02:00:00
+#SBATCH --time=04:00:00
 #SBATCH -o gpu_test.out
 #SBATCH -e gpu_test.err
 
@@ -37,23 +37,31 @@ module load uv
 # Use --frozen if you have uv.lock and want strict reproducibility.
 uv sync --frozen
 
-uv run scripts/train_mini_verifier_experiments.py \
-  --dataset-path dataset/english/train.json \
-  --num-claims 5 \
-  --modes cls_unfrozen \
-  --adapter-id IlyaGusev/saiga_mistral_7b_lora \
-  --device cuda \
-  --dtype float32 \
-  --optimizer-cls adamw \
-  --batch-size 1 \
-  --output-root checkpoints/mini_factcheck
+uv run scripts/prompt_ranking_baseline.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --output results/prompt_baseline_english_validation_complete.json \
+  --evaluate \
+  --eval-output results/prompt_baseline_english_validation_complete_eval.json
 
-# python test_torch.py
-uv run scripts/infer_mini_verifier_experiments.py \
-  --dataset-path dataset/english/train.json \
-  --num-claims 5 \
-  --checkpoint-root checkpoints/mini_factcheck \
-  --modes ntp cls_frozen cls_unfrozen \
-  --output results/mini_factcheck_inference.json
+uv run scripts/prompt_ranking_baseline.py \
+  --dataset-path dataset/spanish/validation_complete.json \
+  --language-name spanish \
+  --output results/prompt_baseline_spanish_validation_complete.json \
+  --evaluate \
+  --eval-output results/prompt_baseline_spanish_validation_complete_eval.json
+
+uv run scripts/prompt_ranking_baseline.py \
+  --dataset-path dataset/arabic/validation_complete.json \
+  --language-name arabic \
+  --output results/prompt_baseline_arabic_validation_complete.json \
+  --evaluate \
+  --eval-output results/prompt_baseline_arabic_validation_complete_eval.json
+
+uv run scripts/evaluate_language_invariance.py \
+  --predictions results/prompt_baseline_english_validation_complete.json results/prompt_baseline_spanish_validation_complete.json results/prompt_baseline_arabic_validation_complete.json \
+  --names english spanish arabic \
+  --output results/prompt_baseline_validation_complete_invariance.json
+
 
 echo "Finished at: $(date)"

@@ -50,6 +50,46 @@ python scripts/infer_sft_lora.py \
   --attn-implementation sdpa
 ```
 
+## English DPO + LoRA
+
+Prepare deterministic DPO pairs from the English complete splits:
+
+```bash
+python scripts/prepare_english_dpo_data.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --output-dir dataset_samples/english_dpo_pairs
+```
+
+Train DPO starting from an existing SFT adapter:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_english_dpo_lora.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --sft-adapter-path checkpoints/english_sft_qlora/final_adapter \
+  --output-dir checkpoints/english_dpo_qlora \
+  --load-in-4bit \
+  --device-map auto \
+  --attn-implementation sdpa
+```
+
+Run inference from the DPO adapter:
+
+```bash
+python scripts/infer_sft_lora.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --adapter-path checkpoints/english_dpo_qlora/final_adapter \
+  --output results/english_dpo_qlora_validation_complete_predictions.json \
+  --load-in-4bit \
+  --device-map auto \
+  --attn-implementation sdpa \
+  --evaluate \
+  --eval-output results/english_dpo_qlora_validation_complete_eval.json
+```
+
 Quick debug run on a small subset:
 
 ```bash

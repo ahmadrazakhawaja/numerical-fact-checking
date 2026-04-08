@@ -270,6 +270,150 @@ def build_proxy_target(row: dict) -> Dict[str, object]:
     }
 
 
+def choose_alternative_label(
+    gold_label: str,
+    label_space: Sequence[str],
+    preferred_label: Optional[str] = None,
+) -> str:
+    canonical = {normalize_label(label): label for label in label_space}
+    normalized_gold = normalize_label(gold_label)
+
+    if preferred_label is not None:
+        preferred = canonical.get(normalize_label(preferred_label))
+        if preferred is not None and normalize_label(preferred) != normalized_gold:
+            return preferred
+
+    for label in label_space:
+        if normalize_label(label) != normalized_gold:
+            return label
+
+    return gold_label
+
+
+def build_rejected_targets(
+    row: dict,
+    label_space: Sequence[str],
+    max_rejected_per_prompt: int = 2,
+) -> List[Dict[str, object]]:
+    chosen = build_proxy_target(row)
+    chosen_ranking = list(chosen["ranked_trace_indices"])
+    chosen_verdict = str(chosen["predicted_verdict"]).strip()
+    normalized_gold = normalize_label(chosen_verdict)
+    verdict_list = row.get("Verdict_list", []) or []
+    num_traces = len(row.get("Reasoning_traces", []) or [])
+
+    positives = [idx for idx, verdict in enumerate(verdict_list) if normalize_label(verdict) == normalized_gold]
+    negatives = [idx for idx, verdict in enumerate(verdict_list) if normalize_label(verdict) != normalized_gold]
+    fallback_wrong_label = choose_alternative_label(
+        gold_label=chosen_verdict,
+        label_space=label_space,
+        preferred_label=row.get("verdict"),
+    )
+
+    candidates: List[Dict[str, object]] = []
+
+    if negatives and chosen_ranking:
+        negative_first = negatives[0]
+        ranking = [negative_first] + [idx for idx in chosen_ranking if idx != negative_first]
+        candidates.append(
+            {
+                "ranked_trace_indices": ranking,
+                "predicted_verdict": chosen_verdict,
+            }
+        )
+
+    if num_traces > 1 and len(chosen_ranking) > 1:
+        swapped = list(chosen_ranking)
+        swapped[0], swapped[1] = swapped[1], swapped[0]
+        candidates.append(
+            {
+                "ranked_trace_indices": swapped,
+                "predicted_verdict": chosen_verdict,
+            }
+        )
+
+    if fallback_wrong_label != chosen_verdict:
+        candidates.append(
+            {
+                "ranked_trace_indices": list(chosen_ranking),
+                "predicted_verdict": fallback_wrong_label,
+            }
+        )
+
+    if negatives and fallback_wrong_label != chosen_verdict and chosen_ranking:
+        negative_first = negatives[0]
+        ranking = [negative_first] + [idx for idx in chosen_ranking if idx != negative_first]
+        candidates.append(
+            {
+                "ranked_trace_indices": ranking,
+                "predicted_verdict": fallback_wrong_label,
+            }
+        )
+
+    if len(candidates) == 0 and len(chosen_ranking) > 1:
+        candidates.append(
+            {
+                "ranked_trace_indices": list(reversed(chosen_ranking)),
+                "predicted_verdict": chosen_verdict,
+            }
+        )
+
+    if len(candidates) == 0:
+        candidates.append(
+            {
+                "ranked_trace_indices": list(range(num_traces)),
+                "predicted_verdict": fallback_wrong_label,
+            }
+        )
+
+    deduped: List[Dict[str, object]] = []
+    seen = set()
+    for candidate in candidates:
+        ranking_key = tuple(int(idx) for idx in candidate["ranked_trace_indices"])
+        key = (ranking_key, normalize_label(candidate["predicted_verdict"]))
+        if ranking_key == tuple(chosen_ranking) and normalize_label(candidate["predicted_verdict"]) == normalized_gold:
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
+        if len(deduped) >= max_rejected_per_prompt:
+            break
+
+    return deduped
+
+
+def build_dpo_pairs(
+    row: dict,
+    label_space: Sequence[str],
+    max_rejected_per_prompt: int = 2,
+) -> List[Dict[str, str]]:
+    chosen = build_proxy_target(row)
+    chosen_text = render_prediction_json(
+        ranked_trace_indices=chosen["ranked_trace_indices"],
+        predicted_verdict=chosen["predicted_verdict"],
+    )
+
+    pairs: List[Dict[str, str]] = []
+    for rejected in build_rejected_targets(
+        row=row,
+        label_space=label_space,
+        max_rejected_per_prompt=max_rejected_per_prompt,
+    ):
+        rejected_text = render_prediction_json(
+            ranked_trace_indices=rejected["ranked_trace_indices"],
+            predicted_verdict=rejected["predicted_verdict"],
+        )
+        pairs.append(
+            {
+                "chosen": chosen_text,
+                "rejected": rejected_text,
+            }
+        )
+
+    return pairs
+
+
 def build_sft_completion(row: dict) -> str:
     target = build_proxy_target(row)
     return render_prediction_json(

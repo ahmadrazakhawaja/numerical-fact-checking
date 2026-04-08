@@ -1,0 +1,14 @@
+{
+  "train_dataset": "dataset/english/train_complete.json",
+  "validation_dataset": "dataset/english/validation_complete.json",
+  "label_space": [
+    "Conflicting",
+    "False",
+    "True"
+  ],
+  "num_train_rows": 11254,
+  "num_validation_rows": 2814,
+  "num_train_pairs": 22508,
+  "num_validation_pairs": 5628,
+  "max_rejected_per_prompt": 2
+}

@@ -5,11 +5,25 @@
 Train an English-only SFT adapter on `Mistral-7B-Instruct-v0.3`:
 
 ```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
 python scripts/train_english_sft_lora.py \
   --train-dataset dataset/english/train.json \
   --validation-dataset dataset/english/validation.json \
   --output-dir checkpoints/english_sft_lora \
-  --gradient-checkpointing
+  --attn-implementation sdpa
+```
+
+Train with QLoRA-style 4-bit loading:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_english_sft_lora.py \
+  --train-dataset dataset/english/train.json \
+  --validation-dataset dataset/english/validation.json \
+  --output-dir checkpoints/english_sft_qlora \
+  --load-in-4bit \
+  --target-modules all-linear \
+  --attn-implementation sdpa
 ```
 
 Run inference from the saved adapter:
@@ -22,6 +36,18 @@ python scripts/infer_sft_lora.py \
   --output results/english_sft_lora_validation_predictions.json \
   --evaluate \
   --eval-output results/english_sft_lora_validation_eval.json
+```
+
+Run inference with 4-bit base-model loading:
+
+```bash
+python scripts/infer_sft_lora.py \
+  --dataset-path dataset/english/validation.json \
+  --language-name english \
+  --adapter-path checkpoints/english_sft_qlora/final_adapter \
+  --output results/english_sft_qlora_validation_predictions.json \
+  --load-in-4bit \
+  --attn-implementation sdpa
 ```
 
 Quick debug run on a small subset:
@@ -78,3 +104,4 @@ Notes:
 - If `--model-id` is omitted, the base model is inferred from the LoRA adapter config.
 - Mistral checkpoints may require a Hugging Face token/license acceptance.
 - Checkpoints are written under `checkpoints/` and ignored by git.
+- `--load-in-4bit` requires `bitsandbytes`. If you use `uv sync --frozen` on the cluster, add `bitsandbytes` to the environment and refresh `uv.lock` before submitting the job.

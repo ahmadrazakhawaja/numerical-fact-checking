@@ -5,14 +5,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import torch
 from torch.utils.data import Dataset
 
 try:
+    from hf_quantization_utils import (
+        add_4bit_loading_args,
+        build_4bit_quantization_config,
+        prepare_model_for_4bit_training,
+    )
     from task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_prompt,
@@ -24,6 +32,11 @@ try:
     )
     from task2_utils import load_json_rows
 except ImportError:  # pragma: no cover - import path fallback
+    from scripts.hf_quantization_utils import (
+        add_4bit_loading_args,
+        build_4bit_quantization_config,
+        prepare_model_for_4bit_training,
+    )
     from scripts.task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_prompt,
@@ -41,6 +54,8 @@ class PreprocessStats:
     num_rows_seen: int = 0
     num_examples_built: int = 0
     num_examples_skipped_overlength: int = 0
+    total_sequence_length: int = 0
+    max_sequence_length: int = 0
 
 
 class TokenizedRankingDataset(Dataset):
@@ -108,6 +123,9 @@ def build_tokenized_features(
         if encoded is None:
             stats.num_examples_skipped_overlength += 1
             continue
+        sequence_length = len(encoded["input_ids"])
+        stats.total_sequence_length += sequence_length
+        stats.max_sequence_length = max(stats.max_sequence_length, sequence_length)
         features.append(encoded)
         stats.num_examples_built += 1
 
@@ -122,7 +140,11 @@ def maybe_limit_rows(rows: Sequence[dict], limit: Optional[int]) -> List[dict]:
     return list(rows[:limit])
 
 
-def parse_target_modules(value: str) -> List[str]:
+def parse_target_modules(value: str):
+    lowered = value.strip().lower()
+    if lowered == "all-linear":
+        return "all-linear"
+
     modules = [item.strip() for item in value.split(",") if item.strip()]
     if not modules:
         raise ValueError("At least one LoRA target module is required.")
@@ -136,6 +158,21 @@ def resolve_device_map_arg(value: str):
     if lowered == "auto":
         return "auto"
     raise ValueError(f"Unsupported device_map value: {value}")
+
+
+def resolve_attn_implementation(value: str) -> Optional[str]:
+    lowered = value.strip().lower()
+    if lowered == "auto":
+        return None
+    if lowered in {"sdpa", "eager"}:
+        return lowered
+    raise ValueError(f"Unsupported attention implementation: {value}")
+
+
+def average_sequence_length(stats: PreprocessStats) -> float:
+    if stats.num_examples_built == 0:
+        return 0.0
+    return stats.total_sequence_length / stats.num_examples_built
 
 
 def save_run_metadata(output_dir: Path, payload: Dict[str, object]) -> None:
@@ -196,12 +233,13 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--limit-train", type=int, default=None)
     parser.add_argument("--limit-validation", type=int, default=None)
-    parser.add_argument("--max-length", type=int, default=4096)
-    parser.add_argument("--max-evidence-items", type=int, default=3)
-    parser.add_argument("--max-evidence-chars", type=int, default=900)
-    parser.add_argument("--max-trace-chars", type=int, default=320)
+    parser.add_argument("--max-length", type=int, default=1536)
+    parser.add_argument("--max-evidence-items", type=int, default=2)
+    parser.add_argument("--max-evidence-chars", type=int, default=512)
+    parser.add_argument("--max-trace-chars", type=int, default=160)
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["auto", "bfloat16", "float16", "float32"])
     parser.add_argument("--device-map", type=str, default="none", choices=["none", "auto"])
+    parser.add_argument("--attn-implementation", type=str, default="sdpa", choices=["auto", "sdpa", "eager"])
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
     parser.add_argument("--num-train-epochs", type=float, default=2.0)
@@ -214,16 +252,30 @@ def main() -> None:
     parser.add_argument("--save-strategy", type=str, default="epoch", choices=["no", "steps", "epoch"])
     parser.add_argument("--eval-strategy", type=str, default="epoch", choices=["no", "steps", "epoch"])
     parser.add_argument("--save-total-limit", type=int, default=2)
-    parser.add_argument("--gradient-checkpointing", action="store_true")
+    parser.add_argument("--gradient-checkpointing", dest="gradient_checkpointing", action="store_true")
+    parser.add_argument("--no-gradient-checkpointing", dest="gradient_checkpointing", action="store_false")
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
     parser.add_argument("--lora-dropout", type=float, default=0.05)
-    parser.add_argument("--target-modules", type=str, default="q_proj,v_proj")
+    parser.add_argument(
+        "--target-modules",
+        type=str,
+        default="q_proj,v_proj",
+        help='Comma-separated module names or "all-linear" for QLoRA-style coverage.',
+    )
     parser.add_argument("--optim", type=str, default="adamw_torch")
+    add_4bit_loading_args(parser)
+    parser.set_defaults(gradient_checkpointing=True)
     args = parser.parse_args()
 
     set_seed(args.seed)
     output_dir = args.output_dir.resolve()
+
+    if torch.cuda.is_available() and torch.cuda.device_count() > 1 and args.device_map == "none":
+        print(
+            f"Detected {torch.cuda.device_count()} visible CUDA devices. "
+            "Use --device-map auto if you want Hugging Face to shard model loading."
+        )
 
     train_rows = maybe_limit_rows(load_json_rows(args.train_dataset), args.limit_train)
     validation_rows = maybe_limit_rows(load_json_rows(args.validation_dataset), args.limit_validation)
@@ -257,17 +309,41 @@ def main() -> None:
     if not validation_features and args.eval_strategy != "no":
         raise ValueError("No validation examples remained after preprocessing. Adjust validation limits or truncation.")
 
+    resolved_dtype = resolve_dtype(args.dtype)
+    target_modules = parse_target_modules(args.target_modules)
+    quantization_config = build_4bit_quantization_config(
+        load_in_4bit=args.load_in_4bit,
+        quant_type=args.bnb_4bit_quant_type,
+        compute_dtype_name=args.bnb_4bit_compute_dtype,
+        use_double_quant=args.bnb_4bit_use_double_quant,
+        fallback_dtype=resolved_dtype,
+    )
+
     model_kwargs = {
-        "torch_dtype": resolve_dtype(args.dtype),
+        "torch_dtype": resolved_dtype,
+        "low_cpu_mem_usage": True,
     }
     resolved_device_map = resolve_device_map_arg(args.device_map)
     if resolved_device_map is not None:
         model_kwargs["device_map"] = resolved_device_map
+    resolved_attn_implementation = resolve_attn_implementation(args.attn_implementation)
+    if resolved_attn_implementation is not None:
+        model_kwargs["attn_implementation"] = resolved_attn_implementation
+    if quantization_config is not None:
+        model_kwargs["quantization_config"] = quantization_config
 
     model = AutoModelForCausalLM.from_pretrained(args.model_id, **model_kwargs)
     model.config.use_cache = False
-    if args.gradient_checkpointing:
-        model.gradient_checkpointing_enable()
+    if args.load_in_4bit:
+        model = prepare_model_for_4bit_training(
+            model,
+            use_gradient_checkpointing=args.gradient_checkpointing,
+        )
+    elif args.gradient_checkpointing:
+        try:
+            model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
+        except TypeError:
+            model.gradient_checkpointing_enable()
         model.enable_input_require_grads()
 
     peft_config = LoraConfig(
@@ -276,7 +352,7 @@ def main() -> None:
         lora_alpha=args.lora_alpha,
         lora_dropout=args.lora_dropout,
         bias="none",
-        target_modules=parse_target_modules(args.target_modules),
+        target_modules=target_modules,
     )
     model = get_peft_model(model, peft_config)
 
@@ -332,13 +408,20 @@ def main() -> None:
                 "seed": args.seed,
                 "dtype": args.dtype,
                 "device_map": args.device_map,
+                "attn_implementation": args.attn_implementation,
                 "gradient_checkpointing": args.gradient_checkpointing,
             },
             "lora_config": {
                 "r": args.lora_r,
                 "lora_alpha": args.lora_alpha,
                 "lora_dropout": args.lora_dropout,
-                "target_modules": parse_target_modules(args.target_modules),
+                "target_modules": target_modules,
+            },
+            "quantization": {
+                "load_in_4bit": args.load_in_4bit,
+                "bnb_4bit_quant_type": args.bnb_4bit_quant_type,
+                "bnb_4bit_compute_dtype": args.bnb_4bit_compute_dtype,
+                "bnb_4bit_use_double_quant": args.bnb_4bit_use_double_quant,
             },
             "artifacts": {
                 "final_adapter_dir": str(final_adapter_dir),
@@ -356,6 +439,11 @@ def main() -> None:
                 "validation_examples": len(validation_features),
                 "train_skipped_overlength": train_stats.num_examples_skipped_overlength,
                 "validation_skipped_overlength": validation_stats.num_examples_skipped_overlength,
+                "train_avg_sequence_length": average_sequence_length(train_stats),
+                "validation_avg_sequence_length": average_sequence_length(validation_stats),
+                "train_max_sequence_length": train_stats.max_sequence_length,
+                "validation_max_sequence_length": validation_stats.max_sequence_length,
+                "load_in_4bit": args.load_in_4bit,
             },
             indent=2,
             ensure_ascii=False,

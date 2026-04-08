@@ -5,13 +5,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import List, Optional
+
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import torch
 
 try:
     from evaluate_clef_task2 import evaluate_predictions_against_dataset
+    from hf_quantization_utils import add_4bit_loading_args, build_4bit_quantization_config
     from task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_prompt,
@@ -24,6 +28,7 @@ try:
     from task2_utils import infer_language_name, load_json_rows
 except ImportError:  # pragma: no cover - import path fallback
     from scripts.evaluate_clef_task2 import evaluate_predictions_against_dataset
+    from scripts.hf_quantization_utils import add_4bit_loading_args, build_4bit_quantization_config
     from scripts.task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_prompt,
@@ -62,6 +67,7 @@ def main() -> None:
     parser.add_argument("--max-trace-chars", type=int, default=1200)
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["auto", "bfloat16", "float16", "float32"])
     parser.add_argument("--device-map", type=str, default="auto")
+    parser.add_argument("--attn-implementation", type=str, default="sdpa", choices=["auto", "sdpa", "eager"])
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--top-p", type=float, default=1.0)
@@ -70,6 +76,7 @@ def main() -> None:
     parser.add_argument("--evaluate", action="store_true")
     parser.add_argument("--eval-k", type=int, default=5)
     parser.add_argument("--eval-output", type=Path, default=None)
+    add_4bit_loading_args(parser)
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -86,11 +93,26 @@ def main() -> None:
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    base_model = AutoModelForCausalLM.from_pretrained(
-        args.model_id,
-        torch_dtype=resolve_dtype(args.dtype),
-        device_map=args.device_map,
+    resolved_dtype = resolve_dtype(args.dtype)
+    quantization_config = build_4bit_quantization_config(
+        load_in_4bit=args.load_in_4bit,
+        quant_type=args.bnb_4bit_quant_type,
+        compute_dtype_name=args.bnb_4bit_compute_dtype,
+        use_double_quant=args.bnb_4bit_use_double_quant,
+        fallback_dtype=resolved_dtype,
     )
+
+    model_kwargs = {
+        "torch_dtype": resolved_dtype,
+        "device_map": args.device_map,
+        "low_cpu_mem_usage": True,
+    }
+    if args.attn_implementation != "auto":
+        model_kwargs["attn_implementation"] = args.attn_implementation
+    if quantization_config is not None:
+        model_kwargs["quantization_config"] = quantization_config
+
+    base_model = AutoModelForCausalLM.from_pretrained(args.model_id, **model_kwargs)
     model = PeftModel.from_pretrained(base_model, str(args.adapter_path))
     model.eval()
 
@@ -152,6 +174,7 @@ def main() -> None:
                 "num_predictions": len(predictions),
                 "start_index": args.start_index,
                 "limit": args.limit,
+                "load_in_4bit": args.load_in_4bit,
             },
             indent=2,
             ensure_ascii=False,

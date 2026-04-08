@@ -1,4 +1,8 @@
 /dataset/english/train.json
+/dataset/train_multi.json
+/dataset/english/train_complete.json
+/dataset/english/train_arabic_translated.json
+/dataset/english/train_spanish_translated.json
 /venv
 /checkpoints/
 /checkpoints/**

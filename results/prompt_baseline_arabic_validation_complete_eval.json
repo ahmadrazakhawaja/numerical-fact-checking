@@ -1,0 +1,16 @@
+{
+  "num_claims": 2814,
+  "k": 5,
+  "recall_at_k": 0.22281463826229111,
+  "recall_at_k_upper_bound": 0.351455062606434,
+  "mrr_at_k": 0.6186685619521443,
+  "macro_f1": 0.4791489287700923,
+  "macro_f1_recall_at_k_mean": 0.3509817835161917,
+  "classwise_f1": {
+    "conflicting": 0.30148270181219106,
+    "false": 0.6472131147540984,
+    "true": 0.4887509697439876
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}

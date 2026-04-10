@@ -1,0 +1,69 @@
+{
+  "prediction_files": [
+    "results/prompt_baseline_english_validation_complete.json",
+    "results/prompt_baseline_spanish_validation_complete.json",
+    "results/prompt_baseline_arabic_validation_complete.json"
+  ],
+  "variant_names": [
+    "english",
+    "spanish",
+    "arabic"
+  ],
+  "group_key": "group_id",
+  "fallback_group_key": "dataset_index",
+  "top_k": 5,
+  "num_variants": 3,
+  "num_complete_groups": 2814,
+  "duplicate_group_rows": {
+    "english": 0,
+    "spanish": 0,
+    "arabic": 0
+  },
+  "verdict_agreement": {
+    "raw_complete_agreement": 0.6858564321250888,
+    "fleiss_kappa": 0.6763270776829134,
+    "krippendorff_alpha_nominal": 0.6763270776829182,
+    "pairwise": {
+      "english__vs__spanish": {
+        "num_groups": 2814,
+        "raw_agreement": 0.8095238095238095,
+        "cohen_kappa": 0.726162462951784
+      },
+      "english__vs__arabic": {
+        "num_groups": 2814,
+        "raw_agreement": 0.7782515991471215,
+        "cohen_kappa": 0.6683846078014041
+      },
+      "spanish__vs__arabic": {
+        "num_groups": 2814,
+        "raw_agreement": 0.749822316986496,
+        "cohen_kappa": 0.6358376370740261
+      }
+    }
+  },
+  "ranking_consistency": {
+    "pairwise": {
+      "english__vs__spanish": {
+        "num_groups": 2814,
+        "mean_kendall_tau": 0.7907512206244113,
+        "mean_spearman_rho": 0.7606772127547035,
+        "mean_top_k_jaccard": 0.8153027380106269,
+        "mean_common_items": 17.157071783937457
+      },
+      "english__vs__arabic": {
+        "num_groups": 2814,
+        "mean_kendall_tau": 0.7715616332943236,
+        "mean_spearman_rho": 0.7419272461537674,
+        "mean_top_k_jaccard": 0.8022571383445588,
+        "mean_common_items": 17.157071783937457
+      },
+      "spanish__vs__arabic": {
+        "num_groups": 2814,
+        "mean_kendall_tau": 0.7270010491758867,
+        "mean_spearman_rho": 0.6902703854519062,
+        "mean_top_k_jaccard": 0.7653709908507353,
+        "mean_common_items": 17.157071783937457
+      }
+    }
+  }
+}

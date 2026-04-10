@@ -185,6 +185,22 @@ def build_training_arguments(TrainingArguments, args, output_dir: Path):
         return TrainingArguments(eval_strategy=args.eval_strategy, **common_kwargs)
 
 
+def build_trainer(trainer_cls, model, ref_model, beta, training_args, train_dataset, eval_dataset, data_collator, tokenizer):
+    common_kwargs = {
+        "model": model,
+        "ref_model": ref_model,
+        "beta": beta,
+        "args": training_args,
+        "train_dataset": train_dataset,
+        "eval_dataset": eval_dataset,
+        "data_collator": data_collator,
+    }
+    try:
+        return trainer_cls(processing_class=tokenizer, **common_kwargs)
+    except TypeError:
+        return trainer_cls(tokenizer=tokenizer, **common_kwargs)
+
+
 def build_tokenized_dpo_features(
     rows: Sequence[dict],
     tokenizer,
@@ -516,11 +532,12 @@ def main() -> None:
     training_args = build_training_arguments(TrainingArguments, args=args, output_dir=output_dir)
     data_collator = DPODataCollator(pad_token_id=tokenizer.pad_token_id)
     DPOLoraTrainer = build_dpo_trainer_class(Trainer)
-    trainer = DPOLoraTrainer(
+    trainer = build_trainer(
+        trainer_cls=DPOLoraTrainer,
         model=policy_model,
         ref_model=reference_model,
         beta=args.beta,
-        args=training_args,
+        training_args=training_args,
         train_dataset=TokenizedDPODataset(train_features),
         eval_dataset=TokenizedDPODataset(validation_features) if validation_features else None,
         data_collator=data_collator,

@@ -4,9 +4,9 @@
 #SBATCH -p scc-gpu
 #SBATCH -G A100:4
 #SBATCH -C inet
-#SBATCH --time=04:00:00
-#SBATCH -o gpu_test.out
-#SBATCH -e gpu_test.err
+#SBATCH --time=02:00:00
+#SBATCH -o gpu_test2.out
+#SBATCH -e gpu_test2.err
 
 set -euo pipefail
 
@@ -38,20 +38,6 @@ module load uv
 uv sync --frozen
 
 uv run scripts/prompt_ranking_baseline.py \
-  --dataset-path dataset/english/validation_complete.json \
-  --language-name english \
-  --output results/prompt_baseline_english_validation_complete.json \
-  --evaluate \
-  --eval-output results/prompt_baseline_english_validation_complete_eval.json
-
-uv run scripts/prompt_ranking_baseline.py \
-  --dataset-path dataset/spanish/validation_complete.json \
-  --language-name spanish \
-  --output results/prompt_baseline_spanish_validation_complete.json \
-  --evaluate \
-  --eval-output results/prompt_baseline_spanish_validation_complete_eval.json
-
-uv run scripts/prompt_ranking_baseline.py \
   --dataset-path dataset/arabic/validation_complete.json \
   --language-name arabic \
   --output results/prompt_baseline_arabic_validation_complete.json \
@@ -62,6 +48,7 @@ uv run scripts/evaluate_language_invariance.py \
   --predictions results/prompt_baseline_english_validation_complete.json results/prompt_baseline_spanish_validation_complete.json results/prompt_baseline_arabic_validation_complete.json \
   --names english spanish arabic \
   --output results/prompt_baseline_validation_complete_invariance.json
+
 
 
 echo "Finished at: $(date)"

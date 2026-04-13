@@ -26,6 +26,20 @@ python scripts/train_english_sft_lora.py \
   --attn-implementation sdpa
 ```
 
+Train with QLoRA-style 4-bit loading plus value-aware numeric embeddings:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_english_sft_lora.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --output-dir checkpoints/english_sft_qlora_numeric \
+  --load-in-4bit \
+  --target-modules all-linear \
+  --attn-implementation sdpa \
+  --use-numeric-embedding
+```
+
 Run inference from the saved adapter:
 
 ```bash
@@ -48,6 +62,20 @@ python scripts/infer_sft_lora.py \
   --output results/english_sft_qlora_validation_predictions.json \
   --load-in-4bit \
   --attn-implementation sdpa
+```
+
+Run inference with 4-bit base-model loading plus numeric embeddings:
+
+```bash
+python scripts/infer_sft_lora.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --adapter-path checkpoints/english_sft_qlora_numeric/final_adapter \
+  --output results/english_sft_qlora_numeric_validation_complete_predictions.json \
+  --load-in-4bit \
+  --device-map auto \
+  --attn-implementation sdpa \
+  --use-numeric-embedding
 ```
 
 ## English DPO + LoRA
@@ -75,6 +103,21 @@ python scripts/train_english_dpo_lora.py \
   --attn-implementation sdpa
 ```
 
+Train numeric-aware DPO starting from a numeric-aware SFT adapter:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_english_dpo_lora.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --sft-adapter-path checkpoints/english_sft_qlora_numeric/final_adapter \
+  --output-dir checkpoints/english_dpo_qlora_numeric \
+  --load-in-4bit \
+  --device-map auto \
+  --attn-implementation sdpa \
+  --use-numeric-embedding
+```
+
 Run inference from the DPO adapter:
 
 ```bash
@@ -88,6 +131,22 @@ python scripts/infer_sft_lora.py \
   --attn-implementation sdpa \
   --evaluate \
   --eval-output results/english_dpo_qlora_validation_complete_eval.json
+```
+
+Run inference from the numeric-aware DPO adapter:
+
+```bash
+python scripts/infer_sft_lora.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --adapter-path checkpoints/english_dpo_qlora_numeric/final_adapter \
+  --output results/english_dpo_qlora_numeric_validation_complete_predictions.json \
+  --load-in-4bit \
+  --device-map auto \
+  --attn-implementation sdpa \
+  --use-numeric-embedding \
+  --evaluate \
+  --eval-output results/english_dpo_qlora_numeric_validation_complete_eval.json
 ```
 
 Quick debug run on a small subset:

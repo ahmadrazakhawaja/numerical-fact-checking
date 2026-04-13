@@ -21,9 +21,15 @@ try:
         build_4bit_quantization_config,
         prepare_model_for_4bit_training,
     )
+    from numeric_embedding_utils import (
+        add_numeric_embedding_args,
+        ensure_numeric_token,
+        resize_model_embeddings_if_needed,
+        wrap_model_with_numeric_embeddings,
+    )
     from task2_ranking_utils import (
         DEFAULT_MODEL_ID,
-        build_prompt,
+        build_prompt_artifacts,
         build_sft_completion,
         infer_label_space,
         resolve_dtype,
@@ -37,9 +43,15 @@ except ImportError:  # pragma: no cover - import path fallback
         build_4bit_quantization_config,
         prepare_model_for_4bit_training,
     )
+    from scripts.numeric_embedding_utils import (
+        add_numeric_embedding_args,
+        ensure_numeric_token,
+        resize_model_embeddings_if_needed,
+        wrap_model_with_numeric_embeddings,
+    )
     from scripts.task2_ranking_utils import (
         DEFAULT_MODEL_ID,
-        build_prompt,
+        build_prompt_artifacts,
         build_sft_completion,
         infer_label_space,
         resolve_dtype,
@@ -79,18 +91,31 @@ class SupervisedDataCollator:
         input_ids = []
         attention_mask = []
         labels = []
+        numeric_mask = []
+        numeric_char_ids = []
+        has_numeric = "numeric_mask" in features[0] and "numeric_char_ids" in features[0]
+        max_numeric_chars = len(features[0]["numeric_char_ids"][0]) if has_numeric and features[0]["numeric_char_ids"] else 0
 
         for feature in features:
             pad_len = max_length - len(feature["input_ids"])
             input_ids.append(feature["input_ids"] + [self.pad_token_id] * pad_len)
             attention_mask.append(feature["attention_mask"] + [0] * pad_len)
             labels.append(feature["labels"] + [self.label_pad_id] * pad_len)
+            if has_numeric:
+                numeric_mask.append(feature["numeric_mask"] + [0] * pad_len)
+                numeric_char_ids.append(
+                    feature["numeric_char_ids"] + ([[0] * max_numeric_chars] * pad_len)
+                )
 
-        return {
+        batch = {
             "input_ids": torch.tensor(input_ids, dtype=torch.long),
             "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
             "labels": torch.tensor(labels, dtype=torch.long),
         }
+        if has_numeric:
+            batch["numeric_mask"] = torch.tensor(numeric_mask, dtype=torch.bool)
+            batch["numeric_char_ids"] = torch.tensor(numeric_char_ids, dtype=torch.long)
+        return batch
 
 
 def build_tokenized_features(
@@ -101,24 +126,31 @@ def build_tokenized_features(
     max_evidence_items: int,
     max_evidence_chars: int,
     max_trace_chars: int,
+    use_numeric_embedding: bool,
+    max_numeric_chars: int,
 ) -> tuple[list[Dict[str, List[int]]], PreprocessStats]:
     features: List[Dict[str, List[int]]] = []
     stats = PreprocessStats(num_rows_seen=len(rows))
+    num_token_id = tokenizer.convert_tokens_to_ids("<num>") if use_numeric_embedding else None
 
     for row in rows:
-        prompt = build_prompt(
+        prompt_artifacts = build_prompt_artifacts(
             row=row,
             label_space=label_space,
             max_evidence_items=max_evidence_items,
             max_evidence_chars=max_evidence_chars,
             max_trace_chars=max_trace_chars,
+            use_numeric_embedding=use_numeric_embedding,
         )
         completion = build_sft_completion(row)
         encoded = tokenize_supervised_example(
             tokenizer=tokenizer,
-            prompt=prompt,
+            prompt=prompt_artifacts["prompt"],
             assistant_response=completion,
             max_length=max_length,
+            prompt_numeric_canonicals=prompt_artifacts["prompt_numeric_canonicals"] if use_numeric_embedding else None,
+            num_token_id=num_token_id,
+            max_numeric_chars=max_numeric_chars,
         )
         if encoded is None:
             stats.num_examples_skipped_overlength += 1
@@ -265,6 +297,7 @@ def main() -> None:
     )
     parser.add_argument("--optim", type=str, default="adamw_torch")
     add_4bit_loading_args(parser)
+    add_numeric_embedding_args(parser)
     parser.set_defaults(gradient_checkpointing=True)
     args = parser.parse_args()
 
@@ -284,6 +317,8 @@ def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    if args.use_numeric_embedding:
+        ensure_numeric_token(tokenizer)
 
     train_features, train_stats = build_tokenized_features(
         rows=train_rows,
@@ -293,6 +328,8 @@ def main() -> None:
         max_evidence_items=args.max_evidence_items,
         max_evidence_chars=args.max_evidence_chars,
         max_trace_chars=args.max_trace_chars,
+        use_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
     )
     validation_features, validation_stats = build_tokenized_features(
         rows=validation_rows,
@@ -302,6 +339,8 @@ def main() -> None:
         max_evidence_items=args.max_evidence_items,
         max_evidence_chars=args.max_evidence_chars,
         max_trace_chars=args.max_trace_chars,
+        use_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
     )
 
     if not train_features:
@@ -333,6 +372,7 @@ def main() -> None:
         model_kwargs["quantization_config"] = quantization_config
 
     model = AutoModelForCausalLM.from_pretrained(args.model_id, **model_kwargs)
+    resize_model_embeddings_if_needed(model, tokenizer)
     model.config.use_cache = False
     if args.load_in_4bit:
         model = prepare_model_for_4bit_training(
@@ -355,6 +395,16 @@ def main() -> None:
         target_modules=target_modules,
     )
     model = get_peft_model(model, peft_config)
+    model, numeric_embedding_config = wrap_model_with_numeric_embeddings(
+        model,
+        tokenizer,
+        artifact_path=None,
+        enable_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
+        numeric_char_embedding_dim=args.numeric_char_embedding_dim,
+        numeric_gru_hidden_size=args.numeric_gru_hidden_size,
+        freeze_value_encoder=False,
+    )
 
     collator = SupervisedDataCollator(pad_token_id=tokenizer.pad_token_id)
 
@@ -423,6 +473,10 @@ def main() -> None:
                 "bnb_4bit_compute_dtype": args.bnb_4bit_compute_dtype,
                 "bnb_4bit_use_double_quant": args.bnb_4bit_use_double_quant,
             },
+            "numeric_embedding": {
+                "enabled": args.use_numeric_embedding,
+                "config": asdict(numeric_embedding_config) if numeric_embedding_config is not None else None,
+            },
             "artifacts": {
                 "final_adapter_dir": str(final_adapter_dir),
                 "train_metrics": str(metrics_path),
@@ -444,6 +498,7 @@ def main() -> None:
                 "train_max_sequence_length": train_stats.max_sequence_length,
                 "validation_max_sequence_length": validation_stats.max_sequence_length,
                 "load_in_4bit": args.load_in_4bit,
+                "use_numeric_embedding": args.use_numeric_embedding,
             },
             indent=2,
             ensure_ascii=False,

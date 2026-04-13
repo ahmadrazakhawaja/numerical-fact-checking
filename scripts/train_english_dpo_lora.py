@@ -22,10 +22,17 @@ try:
         build_4bit_quantization_config,
         prepare_model_for_4bit_training,
     )
+    from numeric_embedding_utils import (
+        add_numeric_embedding_args,
+        ensure_numeric_token,
+        resize_model_embeddings_if_needed,
+        tokenizer_source_for_adapter,
+        wrap_model_with_numeric_embeddings,
+    )
     from task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_dpo_pairs,
-        build_prompt,
+        build_prompt_artifacts,
         infer_label_space,
         resolve_dtype,
         set_seed,
@@ -38,10 +45,17 @@ except ImportError:  # pragma: no cover - import path fallback
         build_4bit_quantization_config,
         prepare_model_for_4bit_training,
     )
+    from scripts.numeric_embedding_utils import (
+        add_numeric_embedding_args,
+        ensure_numeric_token,
+        resize_model_embeddings_if_needed,
+        tokenizer_source_for_adapter,
+        wrap_model_with_numeric_embeddings,
+    )
     from scripts.task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_dpo_pairs,
-        build_prompt,
+        build_prompt_artifacts,
         infer_label_space,
         resolve_dtype,
         set_seed,
@@ -90,17 +104,34 @@ class DPODataCollator:
         input_ids = []
         attention_mask = []
         labels = []
+        numeric_mask = []
+        numeric_char_ids = []
+        has_numeric = f"{prefix}_numeric_mask" in features[0] and f"{prefix}_numeric_char_ids" in features[0]
+        max_numeric_chars = (
+            len(features[0][f"{prefix}_numeric_char_ids"][0])
+            if has_numeric and features[0][f"{prefix}_numeric_char_ids"]
+            else 0
+        )
         for feature in features:
             pad_len = max_length - len(feature[input_key])
             input_ids.append(feature[input_key] + [self.pad_token_id] * pad_len)
             attention_mask.append(feature[attention_key] + [0] * pad_len)
             labels.append(feature[labels_key] + [self.label_pad_id] * pad_len)
+            if has_numeric:
+                numeric_mask.append(feature[f"{prefix}_numeric_mask"] + [0] * pad_len)
+                numeric_char_ids.append(
+                    feature[f"{prefix}_numeric_char_ids"] + ([[0] * max_numeric_chars] * pad_len)
+                )
 
-        return {
+        output = {
             input_key: torch.tensor(input_ids, dtype=torch.long),
             attention_key: torch.tensor(attention_mask, dtype=torch.long),
             labels_key: torch.tensor(labels, dtype=torch.long),
         }
+        if has_numeric:
+            output[f"{prefix}_numeric_mask"] = torch.tensor(numeric_mask, dtype=torch.bool)
+            output[f"{prefix}_numeric_char_ids"] = torch.tensor(numeric_char_ids, dtype=torch.long)
+        return output
 
     def __call__(self, features: Sequence[Dict[str, List[int]]]) -> Dict[str, torch.Tensor]:
         batch = {}
@@ -210,17 +241,21 @@ def build_tokenized_dpo_features(
     max_evidence_chars: int,
     max_trace_chars: int,
     max_rejected_per_prompt: int,
+    use_numeric_embedding: bool,
+    max_numeric_chars: int,
 ) -> tuple[list[Dict[str, List[int]]], DPOPreprocessStats]:
     features: List[Dict[str, List[int]]] = []
     stats = DPOPreprocessStats(num_rows_seen=len(rows))
+    num_token_id = tokenizer.convert_tokens_to_ids("<num>") if use_numeric_embedding else None
 
     for row in rows:
-        prompt = build_prompt(
+        prompt_artifacts = build_prompt_artifacts(
             row=row,
             label_space=label_space,
             max_evidence_items=max_evidence_items,
             max_evidence_chars=max_evidence_chars,
             max_trace_chars=max_trace_chars,
+            use_numeric_embedding=use_numeric_embedding,
         )
         for pair in build_dpo_pairs(
             row=row,
@@ -229,15 +264,21 @@ def build_tokenized_dpo_features(
         ):
             chosen = tokenize_supervised_example(
                 tokenizer=tokenizer,
-                prompt=prompt,
+                prompt=prompt_artifacts["prompt"],
                 assistant_response=pair["chosen"],
                 max_length=max_length,
+                prompt_numeric_canonicals=prompt_artifacts["prompt_numeric_canonicals"] if use_numeric_embedding else None,
+                num_token_id=num_token_id,
+                max_numeric_chars=max_numeric_chars,
             )
             rejected = tokenize_supervised_example(
                 tokenizer=tokenizer,
-                prompt=prompt,
+                prompt=prompt_artifacts["prompt"],
                 assistant_response=pair["rejected"],
                 max_length=max_length,
+                prompt_numeric_canonicals=prompt_artifacts["prompt_numeric_canonicals"] if use_numeric_embedding else None,
+                num_token_id=num_token_id,
+                max_numeric_chars=max_numeric_chars,
             )
             if chosen is None or rejected is None:
                 stats.num_pairs_skipped_overlength += 1
@@ -261,6 +302,11 @@ def build_tokenized_dpo_features(
                     "rejected_labels": rejected["labels"],
                 }
             )
+            if use_numeric_embedding:
+                features[-1]["chosen_numeric_mask"] = chosen["numeric_mask"]
+                features[-1]["chosen_numeric_char_ids"] = chosen["numeric_char_ids"]
+                features[-1]["rejected_numeric_mask"] = rejected["numeric_mask"]
+                features[-1]["rejected_numeric_char_ids"] = rejected["numeric_char_ids"]
 
     return features, stats
 
@@ -311,6 +357,7 @@ def load_policy_model(args, model_kwargs):
     from transformers import AutoModelForCausalLM
 
     base_model = AutoModelForCausalLM.from_pretrained(args.model_id, **model_kwargs)
+    resize_model_embeddings_if_needed(base_model, args.tokenizer)
     if args.load_in_4bit:
         base_model = prepare_model_for_4bit_training(
             base_model,
@@ -324,6 +371,16 @@ def load_policy_model(args, model_kwargs):
     except TypeError:
         model = PeftModel.from_pretrained(base_model, str(args.sft_adapter_path))
         mark_adapter_trainable(model)
+    model, _ = wrap_model_with_numeric_embeddings(
+        model,
+        args.tokenizer,
+        artifact_path=args.sft_adapter_path,
+        enable_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
+        numeric_char_embedding_dim=args.numeric_char_embedding_dim,
+        numeric_gru_hidden_size=args.numeric_gru_hidden_size,
+        freeze_value_encoder=False,
+    )
     model.train()
     return model
 
@@ -333,8 +390,19 @@ def load_reference_model(args, model_kwargs):
     from transformers import AutoModelForCausalLM
 
     ref_base_model = AutoModelForCausalLM.from_pretrained(args.model_id, **model_kwargs)
+    resize_model_embeddings_if_needed(ref_base_model, args.tokenizer)
     ref_base_model.config.use_cache = False
     ref_model = PeftModel.from_pretrained(ref_base_model, str(args.sft_adapter_path))
+    ref_model, _ = wrap_model_with_numeric_embeddings(
+        ref_model,
+        args.tokenizer,
+        artifact_path=args.sft_adapter_path,
+        enable_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
+        numeric_char_embedding_dim=args.numeric_char_embedding_dim,
+        numeric_gru_hidden_size=args.numeric_gru_hidden_size,
+        freeze_value_encoder=True,
+    )
     ref_model.eval()
     for parameter in ref_model.parameters():
         parameter.requires_grad = False
@@ -343,10 +411,12 @@ def load_reference_model(args, model_kwargs):
 
 class DPOLoraTrainerMixin:
     @staticmethod
-    def _sequence_logps(model, input_ids, attention_mask, labels):
+    def _sequence_logps(model, input_ids, attention_mask, labels, numeric_mask=None, numeric_char_ids=None):
         outputs = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
+            numeric_mask=numeric_mask,
+            numeric_char_ids=numeric_char_ids,
             use_cache=False,
         )
         logits = outputs.logits
@@ -382,18 +452,26 @@ def build_dpo_trainer_class(Trainer):
             rejected_input_ids = inputs["rejected_input_ids"]
             rejected_attention_mask = inputs["rejected_attention_mask"]
             rejected_labels = inputs["rejected_labels"]
+            chosen_numeric_mask = inputs.get("chosen_numeric_mask")
+            chosen_numeric_char_ids = inputs.get("chosen_numeric_char_ids")
+            rejected_numeric_mask = inputs.get("rejected_numeric_mask")
+            rejected_numeric_char_ids = inputs.get("rejected_numeric_char_ids")
 
             policy_chosen_logps = self._sequence_logps(
                 model,
                 chosen_input_ids,
                 chosen_attention_mask,
                 chosen_labels,
+                chosen_numeric_mask,
+                chosen_numeric_char_ids,
             )
             policy_rejected_logps = self._sequence_logps(
                 model,
                 rejected_input_ids,
                 rejected_attention_mask,
                 rejected_labels,
+                rejected_numeric_mask,
+                rejected_numeric_char_ids,
             )
 
             with torch.no_grad():
@@ -402,12 +480,16 @@ def build_dpo_trainer_class(Trainer):
                     chosen_input_ids,
                     chosen_attention_mask,
                     chosen_labels,
+                    chosen_numeric_mask,
+                    chosen_numeric_char_ids,
                 )
                 ref_rejected_logps = self._sequence_logps(
                     self.ref_model,
                     rejected_input_ids,
                     rejected_attention_mask,
                     rejected_labels,
+                    rejected_numeric_mask,
+                    rejected_numeric_char_ids,
                 )
 
             logits = self.beta * (
@@ -477,6 +559,7 @@ def main() -> None:
     )
     parser.add_argument("--optim", type=str, default="adamw_torch")
     add_4bit_loading_args(parser)
+    add_numeric_embedding_args(parser)
     parser.set_defaults(gradient_checkpointing=True)
     args = parser.parse_args()
 
@@ -495,9 +578,14 @@ def main() -> None:
 
     from transformers import AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id)
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_source_for_adapter(args.model_id, args.sft_adapter_path)
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    if args.use_numeric_embedding:
+        ensure_numeric_token(tokenizer)
+    args.tokenizer = tokenizer
 
     train_features, train_stats = build_tokenized_dpo_features(
         rows=train_rows,
@@ -508,6 +596,8 @@ def main() -> None:
         max_evidence_chars=args.max_evidence_chars,
         max_trace_chars=args.max_trace_chars,
         max_rejected_per_prompt=args.max_rejected_per_prompt,
+        use_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
     )
     validation_features, validation_stats = build_tokenized_dpo_features(
         rows=validation_rows,
@@ -518,6 +608,8 @@ def main() -> None:
         max_evidence_chars=args.max_evidence_chars,
         max_trace_chars=args.max_trace_chars,
         max_rejected_per_prompt=args.max_rejected_per_prompt,
+        use_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
     )
 
     if not train_features:
@@ -597,6 +689,9 @@ def main() -> None:
                 "bnb_4bit_compute_dtype": args.bnb_4bit_compute_dtype,
                 "bnb_4bit_use_double_quant": args.bnb_4bit_use_double_quant,
             },
+            "numeric_embedding": {
+                "enabled": args.use_numeric_embedding,
+            },
             "artifacts": {
                 "final_adapter_dir": str(final_adapter_dir),
                 "train_metrics": str(train_metrics_path),
@@ -622,6 +717,7 @@ def main() -> None:
                 "train_max_rejected_length": train_stats.max_rejected_length,
                 "validation_max_chosen_length": validation_stats.max_chosen_length,
                 "validation_max_rejected_length": validation_stats.max_rejected_length,
+                "use_numeric_embedding": args.use_numeric_embedding,
             },
             indent=2,
             ensure_ascii=False,

@@ -16,9 +16,16 @@ import torch
 try:
     from evaluate_clef_task2 import evaluate_predictions_against_dataset
     from hf_quantization_utils import add_4bit_loading_args, build_4bit_quantization_config
+    from numeric_embedding_utils import (
+        add_numeric_embedding_args,
+        ensure_numeric_token,
+        resize_model_embeddings_if_needed,
+        tokenizer_source_for_adapter,
+        wrap_model_with_numeric_embeddings,
+    )
     from task2_ranking_utils import (
         DEFAULT_MODEL_ID,
-        build_prompt,
+        build_prompt_artifacts,
         generate_prediction,
         infer_label_space,
         parse_response,
@@ -29,9 +36,16 @@ try:
 except ImportError:  # pragma: no cover - import path fallback
     from scripts.evaluate_clef_task2 import evaluate_predictions_against_dataset
     from scripts.hf_quantization_utils import add_4bit_loading_args, build_4bit_quantization_config
+    from scripts.numeric_embedding_utils import (
+        add_numeric_embedding_args,
+        ensure_numeric_token,
+        resize_model_embeddings_if_needed,
+        tokenizer_source_for_adapter,
+        wrap_model_with_numeric_embeddings,
+    )
     from scripts.task2_ranking_utils import (
         DEFAULT_MODEL_ID,
-        build_prompt,
+        build_prompt_artifacts,
         generate_prediction,
         infer_label_space,
         parse_response,
@@ -77,6 +91,7 @@ def main() -> None:
     parser.add_argument("--eval-k", type=int, default=5)
     parser.add_argument("--eval-output", type=Path, default=None)
     add_4bit_loading_args(parser)
+    add_numeric_embedding_args(parser)
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -89,9 +104,13 @@ def main() -> None:
     language_name = infer_output_language(args.dataset_path, args.language_name)
     variant_name = args.variant_name or args.adapter_path.name
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id)
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_source_for_adapter(args.model_id, args.adapter_path)
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    if args.use_numeric_embedding:
+        ensure_numeric_token(tokenizer)
 
     resolved_dtype = resolve_dtype(args.dtype)
     quantization_config = build_4bit_quantization_config(
@@ -113,7 +132,18 @@ def main() -> None:
         model_kwargs["quantization_config"] = quantization_config
 
     base_model = AutoModelForCausalLM.from_pretrained(args.model_id, **model_kwargs)
+    resize_model_embeddings_if_needed(base_model, tokenizer)
     model = PeftModel.from_pretrained(base_model, str(args.adapter_path))
+    model, _ = wrap_model_with_numeric_embeddings(
+        model,
+        tokenizer,
+        artifact_path=args.adapter_path,
+        enable_numeric_embedding=args.use_numeric_embedding,
+        max_numeric_chars=args.max_numeric_chars,
+        numeric_char_embedding_dim=args.numeric_char_embedding_dim,
+        numeric_gru_hidden_size=args.numeric_gru_hidden_size,
+        freeze_value_encoder=True,
+    )
     model.eval()
 
     predictions: List[dict] = []
@@ -122,21 +152,25 @@ def main() -> None:
         dataset_index = args.start_index + local_offset
         num_traces = len(row.get("Reasoning_traces", []) or [])
 
-        prompt = build_prompt(
+        prompt_artifacts = build_prompt_artifacts(
             row=row,
             label_space=label_space,
             max_evidence_items=args.max_evidence_items,
             max_evidence_chars=args.max_evidence_chars,
             max_trace_chars=args.max_trace_chars,
+            use_numeric_embedding=args.use_numeric_embedding,
         )
         raw_output = generate_prediction(
             model=model,
             tokenizer=tokenizer,
-            prompt=prompt,
+            prompt=prompt_artifacts["prompt"],
             max_new_tokens=args.max_new_tokens,
             do_sample=do_sample,
             temperature=args.temperature,
             top_p=args.top_p,
+            prompt_numeric_canonicals=prompt_artifacts["prompt_numeric_canonicals"] if args.use_numeric_embedding else None,
+            num_token_id=tokenizer.convert_tokens_to_ids("<num>") if args.use_numeric_embedding else None,
+            max_numeric_chars=args.max_numeric_chars,
         )
         parsed = parse_response(raw_output, label_space=label_space, num_traces=num_traces)
         record = {
@@ -175,6 +209,7 @@ def main() -> None:
                 "start_index": args.start_index,
                 "limit": args.limit,
                 "load_in_4bit": args.load_in_4bit,
+                "use_numeric_embedding": args.use_numeric_embedding,
             },
             indent=2,
             ensure_ascii=False,

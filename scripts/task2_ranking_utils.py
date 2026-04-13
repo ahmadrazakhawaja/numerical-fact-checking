@@ -7,13 +7,15 @@ import ast
 import json
 import random
 import re
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import torch
 
 try:
+    from numeric_embedding_utils import annotate_numeric_text, build_numeric_prompt_features
     from task2_utils import normalize_label
 except ImportError:  # pragma: no cover - import path fallback
+    from scripts.numeric_embedding_utils import annotate_numeric_text, build_numeric_prompt_features
     from scripts.task2_utils import normalize_label
 
 
@@ -59,32 +61,46 @@ def infer_label_space(rows: Sequence[dict]) -> List[str]:
     return labels
 
 
-def build_prompt(
+def build_prompt_artifacts(
     row: dict,
     label_space: Sequence[str],
     max_evidence_items: int,
     max_evidence_chars: int,
     max_trace_chars: int,
-) -> str:
+    use_numeric_embedding: bool = False,
+) -> Dict[str, object]:
     claim = str(row.get("claim", "")).strip()
     evidences = row.get("evidences", []) or []
     traces = row.get("Reasoning_traces", []) or []
+    numeric_canonicals: List[str] = []
+
+    def maybe_annotate(text: str, use_numeric_embedding: bool) -> str:
+        nonlocal numeric_canonicals
+        if not use_numeric_embedding:
+            return str(text)
+        annotated, canonicals = annotate_numeric_text(str(text))
+        numeric_canonicals.extend(canonicals)
+        return annotated
+
+    claim_text = maybe_annotate(claim, use_numeric_embedding)
+    evidence_items = [maybe_annotate(x, use_numeric_embedding) for x in evidences]
+    trace_items = [maybe_annotate(x, use_numeric_embedding) for x in traces]
 
     evidence_block = render_list_block(
-        items=[str(x) for x in evidences],
+        items=evidence_items,
         max_items=max_evidence_items,
         max_chars=max_evidence_chars,
         header="Evidence snippets:",
     )
     trace_block = render_list_block(
-        items=[str(x) for x in traces],
+        items=trace_items,
         max_items=0,
         max_chars=max_trace_chars,
         header="Candidate reasoning traces:",
     )
     allowed_labels = ", ".join(label_space)
 
-    return (
+    prompt = (
         "You are ranking candidate reasoning traces for multilingual fact-checking.\n"
         "Use the claim and the evidence snippets to judge which reasoning traces are most reliable.\n"
         "Rank all traces from best to worst.\n"
@@ -93,10 +109,32 @@ def build_prompt(
         "Return strict JSON only in this exact schema:\n"
         '{"ranked_trace_indices":[0,1,2],"predicted_verdict":"False"}\n'
         "Do not include markdown. Do not include any explanation.\n\n"
-        f"Claim:\n{claim}\n\n"
+        f"Claim:\n{claim_text}\n\n"
         f"{evidence_block}\n\n"
         f"{trace_block}\n"
     )
+    return {
+        "prompt": prompt,
+        "prompt_numeric_canonicals": numeric_canonicals,
+    }
+
+
+def build_prompt(
+    row: dict,
+    label_space: Sequence[str],
+    max_evidence_items: int,
+    max_evidence_chars: int,
+    max_trace_chars: int,
+    use_numeric_embedding: bool = False,
+) -> str:
+    return build_prompt_artifacts(
+        row=row,
+        label_space=label_space,
+        max_evidence_items=max_evidence_items,
+        max_evidence_chars=max_evidence_chars,
+        max_trace_chars=max_trace_chars,
+        use_numeric_embedding=use_numeric_embedding,
+    )["prompt"]
 
 
 def build_prompt_messages(prompt: str) -> List[dict]:
@@ -127,6 +165,9 @@ def tokenize_supervised_example(
     prompt: str,
     assistant_response: str,
     max_length: int,
+    prompt_numeric_canonicals: Optional[Sequence[str]] = None,
+    num_token_id: Optional[int] = None,
+    max_numeric_chars: int = 24,
 ) -> Optional[Dict[str, List[int]]]:
     prompt_text = render_chat_prompt(tokenizer, prompt)
     full_text = render_chat_transcript(tokenizer, prompt, assistant_response)
@@ -138,6 +179,7 @@ def tokenize_supervised_example(
         return None
 
     prompt_len = len(prompt_ids)
+    overflow = 0
     if len(full_ids) > max_length:
         overflow = len(full_ids) - max_length
         if overflow >= prompt_len:
@@ -150,11 +192,56 @@ def tokenize_supervised_example(
     for idx in range(min(prompt_len, len(labels))):
         labels[idx] = -100
 
-    return {
+    output = {
         "input_ids": full_ids,
         "attention_mask": attention_mask,
         "labels": labels,
     }
+    if prompt_numeric_canonicals is not None and num_token_id is not None:
+        numeric_mask, numeric_char_ids = build_numeric_prompt_features(
+            prompt_ids=prompt_ids,
+            prompt_numeric_canonicals=prompt_numeric_canonicals,
+            num_token_id=num_token_id,
+            max_numeric_chars=max_numeric_chars,
+            overflow=overflow,
+            sequence_length=len(full_ids),
+        )
+        output["numeric_mask"] = numeric_mask
+        output["numeric_char_ids"] = numeric_char_ids
+    return output
+
+
+def tokenize_prompt_for_generation(
+    tokenizer,
+    prompt: str,
+    prompt_numeric_canonicals: Optional[Sequence[str]] = None,
+    num_token_id: Optional[int] = None,
+    max_numeric_chars: int = 24,
+    max_length: Optional[int] = None,
+) -> Dict[str, List[int]]:
+    prompt_text = render_chat_prompt(tokenizer, prompt)
+    input_ids = tokenizer(prompt_text, add_special_tokens=False).input_ids
+    overflow = 0
+    if max_length is not None and len(input_ids) > max_length:
+        overflow = len(input_ids) - max_length
+        input_ids = input_ids[overflow:]
+
+    output = {
+        "input_ids": input_ids,
+        "attention_mask": [1] * len(input_ids),
+    }
+    if prompt_numeric_canonicals is not None and num_token_id is not None:
+        numeric_mask, numeric_char_ids = build_numeric_prompt_features(
+            prompt_ids=tokenizer(prompt_text, add_special_tokens=False).input_ids,
+            prompt_numeric_canonicals=prompt_numeric_canonicals,
+            num_token_id=num_token_id,
+            max_numeric_chars=max_numeric_chars,
+            overflow=overflow,
+            sequence_length=len(input_ids),
+        )
+        output["numeric_mask"] = numeric_mask
+        output["numeric_char_ids"] = numeric_char_ids
+    return output
 
 
 def extract_balanced_json_object(text: str) -> Optional[str]:
@@ -436,6 +523,27 @@ def get_model_input_device(model) -> torch.device:
     return next(model.parameters()).device
 
 
+def _sample_next_token(logits: torch.Tensor, do_sample: bool, temperature: float, top_p: float) -> torch.Tensor:
+    if not do_sample:
+        return torch.argmax(logits, dim=-1)
+
+    adjusted = logits / max(temperature, 1e-5)
+    probs = torch.softmax(adjusted, dim=-1)
+
+    if top_p < 1.0:
+        sorted_probs, sorted_indices = torch.sort(probs, descending=True, dim=-1)
+        cumulative = torch.cumsum(sorted_probs, dim=-1)
+        sorted_mask = cumulative > top_p
+        sorted_mask[..., 1:] = sorted_mask[..., :-1].clone()
+        sorted_mask[..., 0] = False
+        sorted_probs = sorted_probs.masked_fill(sorted_mask, 0.0)
+        sorted_probs = sorted_probs / sorted_probs.sum(dim=-1, keepdim=True)
+        sampled = torch.multinomial(sorted_probs, num_samples=1)
+        return sorted_indices.gather(dim=-1, index=sampled).squeeze(-1)
+
+    return torch.multinomial(probs, num_samples=1).squeeze(-1)
+
+
 def generate_prediction(
     model,
     tokenizer,
@@ -444,24 +552,58 @@ def generate_prediction(
     do_sample: bool,
     temperature: float,
     top_p: float,
+    prompt_numeric_canonicals: Optional[Sequence[str]] = None,
+    num_token_id: Optional[int] = None,
+    max_numeric_chars: int = 24,
 ) -> str:
-    messages = build_prompt_messages(prompt)
-    rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    model_inputs = tokenizer(rendered, return_tensors="pt")
-    model_inputs = model_inputs.to(get_model_input_device(model))
+    tokenized = tokenize_prompt_for_generation(
+        tokenizer=tokenizer,
+        prompt=prompt,
+        prompt_numeric_canonicals=prompt_numeric_canonicals,
+        num_token_id=num_token_id,
+        max_numeric_chars=max_numeric_chars,
+    )
+    device = get_model_input_device(model)
+    input_ids = torch.tensor([tokenized["input_ids"]], dtype=torch.long, device=device)
+    attention_mask = torch.tensor([tokenized["attention_mask"]], dtype=torch.long, device=device)
+    numeric_mask = None
+    numeric_char_ids = None
+    if "numeric_mask" in tokenized:
+        numeric_mask = torch.tensor([tokenized["numeric_mask"]], dtype=torch.bool, device=device)
+        numeric_char_ids = torch.tensor([tokenized["numeric_char_ids"]], dtype=torch.long, device=device)
 
-    generation_kwargs = {
-        "max_new_tokens": max_new_tokens,
-        "do_sample": do_sample,
-        "pad_token_id": tokenizer.pad_token_id,
-        "eos_token_id": tokenizer.eos_token_id,
-    }
-    if do_sample:
-        generation_kwargs["temperature"] = temperature
-        generation_kwargs["top_p"] = top_p
+    eos_token_id = tokenizer.eos_token_id
+    generated_tokens: List[int] = []
 
     with torch.inference_mode():
-        outputs = model.generate(**model_inputs, **generation_kwargs)
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            numeric_mask=numeric_mask,
+            numeric_char_ids=numeric_char_ids,
+            use_cache=True,
+        )
+        past_key_values = outputs.past_key_values
+        next_token = _sample_next_token(outputs.logits[:, -1, :], do_sample=do_sample, temperature=temperature, top_p=top_p)
 
-    generated = outputs[0][model_inputs["input_ids"].shape[-1] :]
-    return tokenizer.decode(generated, skip_special_tokens=True).strip()
+        for _ in range(max_new_tokens):
+            token_id = int(next_token.item())
+            if eos_token_id is not None and token_id == eos_token_id:
+                break
+            generated_tokens.append(token_id)
+
+            step_input_ids = next_token.view(1, 1).to(device)
+            attention_mask = torch.cat(
+                [attention_mask, torch.ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype, device=device)],
+                dim=1,
+            )
+            outputs = model(
+                input_ids=step_input_ids,
+                attention_mask=attention_mask,
+                past_key_values=past_key_values,
+                use_cache=True,
+            )
+            past_key_values = outputs.past_key_values
+            next_token = _sample_next_token(outputs.logits[:, -1, :], do_sample=do_sample, temperature=temperature, top_p=top_p)
+
+    return tokenizer.decode(generated_tokens, skip_special_tokens=True).strip()

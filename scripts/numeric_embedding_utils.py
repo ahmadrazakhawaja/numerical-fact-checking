@@ -313,7 +313,10 @@ class NumericValueEmbeddingWrapper(nn.Module):
 
     @property
     def hf_device_map(self):
-        return getattr(self.base_model, "hf_device_map", None)
+        device_map = getattr(self.base_model, "hf_device_map", None)
+        if device_map is None:
+            raise AttributeError("hf_device_map is not set on the wrapped base model.")
+        return device_map
 
     @property
     def device(self):

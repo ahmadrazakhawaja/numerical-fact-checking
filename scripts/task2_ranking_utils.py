@@ -95,6 +95,8 @@ def build_prompt_artifacts(
     trace_display_items = [truncate_text(str(x), max_trace_chars) for x in traces]
     evidence_items = [maybe_annotate(x, use_numeric_embedding) for x in evidence_display_items]
     trace_items = [maybe_annotate(x, use_numeric_embedding) for x in trace_display_items]
+    num_traces = len(trace_items)
+    valid_indices = ", ".join(str(idx) for idx in range(num_traces))
 
     evidence_block = render_list_block(
         items=evidence_items,
@@ -115,11 +117,15 @@ def build_prompt_artifacts(
     prompt = (
         "You are ranking candidate reasoning traces for multilingual fact-checking.\n"
         "Use the claim and the evidence snippets to judge which reasoning traces are most reliable.\n"
-        "Rank all traces from best to worst.\n"
+        "Rank all candidate traces from best to worst. The input order is arbitrary and must not be copied unless it is truly the best ranking.\n"
+        "A better trace is one that is better supported by the evidence, checks the claim more directly, and reaches a more reliable verdict.\n\n"
+        f"There are {num_traces} traces indexed 0 through {max(num_traces - 1, 0)}.\n"
+        f"The ranked_trace_indices value must be a permutation containing each of these indices exactly once: [{valid_indices}].\n"
+        "Do not omit indices. Do not repeat indices. Do not use placeholder indices.\n"
         "Then predict the final verdict for the claim.\n\n"
         f"Allowed verdict labels: {allowed_labels}\n\n"
-        "Return strict JSON only in this exact schema:\n"
-        '{"ranked_trace_indices":[0,1,2],"predicted_verdict":"False"}\n'
+        "Return strict JSON only with this schema:\n"
+        '{"ranked_trace_indices":[...],"predicted_verdict":"<one allowed label>"}\n'
         "Do not include markdown. Do not include any explanation.\n\n"
         f"Claim:\n{claim_text}\n\n"
         f"{evidence_block}\n\n"
@@ -147,6 +153,63 @@ def build_prompt(
         max_trace_chars=max_trace_chars,
         use_numeric_embedding=use_numeric_embedding,
     )["prompt"]
+
+
+def build_pairwise_prompt_artifacts(
+    row: dict,
+    max_evidence_items: int,
+    max_evidence_chars: int,
+    max_trace_chars: int,
+    left_index: int,
+    right_index: int,
+    use_numeric_embedding: bool = False,
+) -> Dict[str, object]:
+    claim = str(row.get("claim", "")).strip()
+    evidences = row.get("evidences", []) or []
+    traces = row.get("Reasoning_traces", []) or []
+    numeric_canonicals: List[str] = []
+
+    def maybe_annotate(text: str) -> str:
+        nonlocal numeric_canonicals
+        if not use_numeric_embedding:
+            return str(text)
+        annotated, canonicals = annotate_numeric_text(str(text))
+        numeric_canonicals.extend(canonicals)
+        return annotated
+
+    claim_text = maybe_annotate(claim)
+    capped_evidences = list(evidences[:max_evidence_items]) if max_evidence_items > 0 else list(evidences)
+    evidence_items = [
+        maybe_annotate(truncate_text(str(item), max_evidence_chars))
+        for item in capped_evidences
+    ]
+    left_trace = maybe_annotate(truncate_text(str(traces[left_index]), max_trace_chars))
+    right_trace = maybe_annotate(truncate_text(str(traces[right_index]), max_trace_chars))
+    evidence_block = render_list_block(
+        items=evidence_items,
+        max_items=max_evidence_items,
+        max_chars=max_evidence_chars,
+        header="Evidence snippets:",
+        truncate_items=False,
+    )
+
+    prompt = (
+        "You are comparing two candidate reasoning traces for multilingual fact-checking.\n"
+        "Use the claim and evidence snippets to decide which trace is more reliable.\n"
+        "Choose exactly one trace: A or B.\n\n"
+        "Return strict JSON only in this exact schema:\n"
+        '{"preferred_trace":"A"}\n'
+        "Allowed values for preferred_trace: A, B.\n"
+        "Do not include markdown. Do not include any explanation.\n\n"
+        f"Claim:\n{claim_text}\n\n"
+        f"{evidence_block}\n\n"
+        f"Trace A (original index {left_index}):\n{left_trace}\n\n"
+        f"Trace B (original index {right_index}):\n{right_trace}\n"
+    )
+    return {
+        "prompt": prompt,
+        "prompt_numeric_canonicals": numeric_canonicals,
+    }
 
 
 def build_prompt_messages(prompt: str) -> List[dict]:
@@ -341,6 +404,174 @@ def parse_response(text: str, label_space: Sequence[str], num_traces: int) -> Di
         "json_found": json_blob is not None,
         "json_parse_error": parse_error,
     }
+
+
+def parse_pairwise_preference(text: str) -> Optional[str]:
+    parsed: Dict[str, object] = {}
+    json_blob = extract_balanced_json_object(text)
+    if json_blob is not None:
+        try:
+            value = json.loads(json_blob)
+            if isinstance(value, dict):
+                parsed = value
+        except json.JSONDecodeError:
+            try:
+                value = ast.literal_eval(json_blob)
+                if isinstance(value, dict):
+                    parsed = value
+            except (SyntaxError, ValueError):
+                parsed = {}
+
+    raw_value = None
+    for key in ("preferred_trace", "preferred", "choice", "winner"):
+        if key in parsed:
+            raw_value = parsed[key]
+            break
+
+    normalized = normalize_label(raw_value if raw_value is not None else text)
+    normalized = re.sub(r"[^a-z0-9 ]+", " ", normalized)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+
+    if normalized in {"a", "0", "first", "trace a", "candidate a", "option a"}:
+        return "A"
+    if normalized in {"b", "1", "second", "trace b", "candidate b", "option b"}:
+        return "B"
+
+    if re.search(r"\b(?:choose|prefer|preferred|select|winner is)\s+(?:trace\s+)?a\b", normalized):
+        return "A"
+    if re.search(r"\b(?:choose|prefer|preferred|select|winner is)\s+(?:trace\s+)?b\b", normalized):
+        return "B"
+
+    mentions_a = re.search(r"\btrace\s+a\b", normalized) is not None
+    mentions_b = re.search(r"\btrace\s+b\b", normalized) is not None
+    if mentions_a and not mentions_b:
+        return "A"
+    if mentions_b and not mentions_a:
+        return "B"
+    return None
+
+
+def derive_verdict_from_ranking(
+    verdict_list: Sequence[str],
+    ranked_trace_indices: Sequence[int],
+    top_k: int,
+    label_space: Optional[Sequence[str]] = None,
+) -> str:
+    top_k = max(1, int(top_k))
+    display_by_normalized = {
+        normalize_label(label): str(label).strip()
+        for label in (label_space or [])
+        if str(label).strip()
+    }
+    picked: List[str] = []
+    for index in ranked_trace_indices[:top_k]:
+        try:
+            trace_index = int(index)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= trace_index < len(verdict_list):
+            normalized = normalize_label(verdict_list[trace_index])
+            if normalized:
+                picked.append(normalized)
+
+    if not picked:
+        return ""
+
+    counts: Dict[str, int] = {}
+    for label in picked:
+        counts[label] = counts.get(label, 0) + 1
+
+    # Majority vote over top-k. Ties are resolved by earliest occurrence in the ranking.
+    best_label = picked[0]
+    best_count = counts[best_label]
+    for label in picked:
+        count = counts[label]
+        if count > best_count:
+            best_label = label
+            best_count = count
+
+    return display_by_normalized.get(best_label, best_label)
+
+
+def generate_pairwise_ranking(
+    model,
+    tokenizer,
+    row: dict,
+    max_evidence_items: int,
+    max_evidence_chars: int,
+    max_trace_chars: int,
+    max_new_tokens: int,
+    do_sample: bool,
+    temperature: float,
+    top_p: float,
+    use_numeric_embedding: bool = False,
+    num_token_id: Optional[int] = None,
+    max_numeric_chars: int = 24,
+    keep_pairwise_details: bool = False,
+) -> Dict[str, object]:
+    traces = row.get("Reasoning_traces", []) or []
+    num_traces = len(traces)
+    scores = [0.0] * num_traces
+    pairwise_details: List[Dict[str, object]] = []
+    invalid_outputs = 0
+    comparison_count = 0
+
+    for left_index in range(num_traces):
+        for right_index in range(left_index + 1, num_traces):
+            prompt_artifacts = build_pairwise_prompt_artifacts(
+                row=row,
+                max_evidence_items=max_evidence_items,
+                max_evidence_chars=max_evidence_chars,
+                max_trace_chars=max_trace_chars,
+                left_index=left_index,
+                right_index=right_index,
+                use_numeric_embedding=use_numeric_embedding,
+            )
+            raw_output = generate_prediction(
+                model=model,
+                tokenizer=tokenizer,
+                prompt=prompt_artifacts["prompt"],
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+                prompt_numeric_canonicals=(
+                    prompt_artifacts["prompt_numeric_canonicals"] if use_numeric_embedding else None
+                ),
+                num_token_id=num_token_id if use_numeric_embedding else None,
+                max_numeric_chars=max_numeric_chars,
+            )
+            preferred = parse_pairwise_preference(raw_output)
+            comparison_count += 1
+            if preferred == "A":
+                scores[left_index] += 1.0
+            elif preferred == "B":
+                scores[right_index] += 1.0
+            else:
+                invalid_outputs += 1
+                scores[left_index] += 0.5
+                scores[right_index] += 0.5
+
+            if keep_pairwise_details:
+                pairwise_details.append(
+                    {
+                        "left_index": left_index,
+                        "right_index": right_index,
+                        "preferred": preferred,
+                        "raw_model_output": raw_output,
+                    }
+                )
+
+    ranked = sorted(range(num_traces), key=lambda idx: (-scores[idx], idx))
+    result: Dict[str, object] = {
+        "ranked_trace_indices": ranked,
+        "pairwise_scores": scores,
+        "num_pairwise_comparisons": comparison_count,
+        "invalid_pairwise_outputs": invalid_outputs,
+    }
+    if keep_pairwise_details:
+        result["pairwise_details"] = pairwise_details
+    return result
 
 
 def render_prediction_json(ranked_trace_indices: Sequence[int], predicted_verdict: str) -> str:

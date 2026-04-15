@@ -175,6 +175,35 @@ python scripts/prompt_ranking_baseline.py \
   --eval-output results/prompt_baseline_english_val_10_eval.json
 ```
 
+Run the prompted baseline in pairwise ranking mode and derive the verdict from the
+top-5 ranked traces:
+
+```bash
+python scripts/prompt_ranking_baseline.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --output results/prompt_baseline_english_validation_complete_pairwise.json \
+  --ranking-mode pairwise \
+  --verdict-top-k 5 \
+  --evaluate \
+  --eval-output results/prompt_baseline_english_validation_complete_pairwise_eval.json
+```
+
+Run adapter inference in pairwise ranking mode:
+
+```bash
+python scripts/infer_sft_lora.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --adapter-path checkpoints/english_sft_qlora/final_adapter \
+  --output results/english_sft_qlora_validation_complete_pairwise_predictions.json \
+  --load-in-4bit \
+  --ranking-mode pairwise \
+  --verdict-top-k 5 \
+  --evaluate \
+  --eval-output results/english_sft_qlora_validation_complete_pairwise_eval.json
+```
+
 ## Mini verifier experiments (legacy 5-sample setup)
 
 Train the 3 requested settings on `dataset/english/train.json`:

@@ -26,6 +26,8 @@ try:
     from task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_prompt_artifacts,
+        derive_verdict_from_ranking,
+        generate_pairwise_ranking,
         generate_prediction,
         infer_label_space,
         parse_response,
@@ -46,6 +48,8 @@ except ImportError:  # pragma: no cover - import path fallback
     from scripts.task2_ranking_utils import (
         DEFAULT_MODEL_ID,
         build_prompt_artifacts,
+        derive_verdict_from_ranking,
+        generate_pairwise_ranking,
         generate_prediction,
         infer_label_space,
         parse_response,
@@ -79,6 +83,29 @@ def main() -> None:
     parser.add_argument("--max-evidence-items", type=int, default=3)
     parser.add_argument("--max-evidence-chars", type=int, default=1200)
     parser.add_argument("--max-trace-chars", type=int, default=1200)
+    parser.add_argument(
+        "--ranking-mode",
+        choices=["listwise", "pairwise"],
+        default="listwise",
+        help="Ranking strategy. Pairwise compares all trace pairs and aggregates wins.",
+    )
+    parser.add_argument(
+        "--pairwise-max-new-tokens",
+        type=int,
+        default=32,
+        help="Max generated tokens for each pairwise comparison.",
+    )
+    parser.add_argument(
+        "--derive-verdict-from-ranking",
+        action="store_true",
+        help="Derive predicted_verdict from top-k ranked trace verdicts instead of model output.",
+    )
+    parser.add_argument(
+        "--verdict-top-k",
+        type=int,
+        default=1,
+        help="Number of top ranked traces used for derived verdict majority vote.",
+    )
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["auto", "bfloat16", "float16", "float32"])
     parser.add_argument("--device-map", type=str, default="auto")
     parser.add_argument("--attn-implementation", type=str, default="sdpa", choices=["auto", "sdpa", "eager"])
@@ -152,32 +179,77 @@ def main() -> None:
         dataset_index = args.start_index + local_offset
         num_traces = len(row.get("Reasoning_traces", []) or [])
 
-        prompt_artifacts = build_prompt_artifacts(
-            row=row,
-            label_space=label_space,
-            max_evidence_items=args.max_evidence_items,
-            max_evidence_chars=args.max_evidence_chars,
-            max_trace_chars=args.max_trace_chars,
-            use_numeric_embedding=args.use_numeric_embedding,
-        )
-        raw_output = generate_prediction(
-            model=model,
-            tokenizer=tokenizer,
-            prompt=prompt_artifacts["prompt"],
-            max_new_tokens=args.max_new_tokens,
-            do_sample=do_sample,
-            temperature=args.temperature,
-            top_p=args.top_p,
-            prompt_numeric_canonicals=prompt_artifacts["prompt_numeric_canonicals"] if args.use_numeric_embedding else None,
-            num_token_id=tokenizer.convert_tokens_to_ids("<num>") if args.use_numeric_embedding else None,
-            max_numeric_chars=args.max_numeric_chars,
-        )
-        parsed = parse_response(raw_output, label_space=label_space, num_traces=num_traces)
+        raw_output = ""
+        parsed = {
+            "ranked_trace_indices": list(range(num_traces)),
+            "predicted_verdict": "",
+            "json_found": False,
+            "json_parse_error": None,
+        }
+        pairwise_result = None
+        num_token_id = tokenizer.convert_tokens_to_ids("<num>") if args.use_numeric_embedding else None
+        if args.ranking_mode == "pairwise":
+            pairwise_result = generate_pairwise_ranking(
+                model=model,
+                tokenizer=tokenizer,
+                row=row,
+                max_evidence_items=args.max_evidence_items,
+                max_evidence_chars=args.max_evidence_chars,
+                max_trace_chars=args.max_trace_chars,
+                max_new_tokens=args.pairwise_max_new_tokens,
+                do_sample=do_sample,
+                temperature=args.temperature,
+                top_p=args.top_p,
+                use_numeric_embedding=args.use_numeric_embedding,
+                num_token_id=num_token_id,
+                max_numeric_chars=args.max_numeric_chars,
+                keep_pairwise_details=args.save_debug_fields,
+            )
+            ranked_trace_indices = pairwise_result["ranked_trace_indices"]
+            predicted_verdict = derive_verdict_from_ranking(
+                verdict_list=row.get("Verdict_list", []) or [],
+                ranked_trace_indices=ranked_trace_indices,
+                top_k=args.verdict_top_k,
+                label_space=label_space,
+            )
+        else:
+            prompt_artifacts = build_prompt_artifacts(
+                row=row,
+                label_space=label_space,
+                max_evidence_items=args.max_evidence_items,
+                max_evidence_chars=args.max_evidence_chars,
+                max_trace_chars=args.max_trace_chars,
+                use_numeric_embedding=args.use_numeric_embedding,
+            )
+            raw_output = generate_prediction(
+                model=model,
+                tokenizer=tokenizer,
+                prompt=prompt_artifacts["prompt"],
+                max_new_tokens=args.max_new_tokens,
+                do_sample=do_sample,
+                temperature=args.temperature,
+                top_p=args.top_p,
+                prompt_numeric_canonicals=prompt_artifacts["prompt_numeric_canonicals"] if args.use_numeric_embedding else None,
+                num_token_id=num_token_id,
+                max_numeric_chars=args.max_numeric_chars,
+            )
+            parsed = parse_response(raw_output, label_space=label_space, num_traces=num_traces)
+            ranked_trace_indices = parsed["ranked_trace_indices"]
+            if args.derive_verdict_from_ranking or not parsed["predicted_verdict"]:
+                predicted_verdict = derive_verdict_from_ranking(
+                    verdict_list=row.get("Verdict_list", []) or [],
+                    ranked_trace_indices=ranked_trace_indices,
+                    top_k=args.verdict_top_k,
+                    label_space=label_space,
+                )
+            else:
+                predicted_verdict = parsed["predicted_verdict"]
+
         record = {
             "language": language_name,
             "dataset_index": dataset_index,
-            "ranked_trace_indices": parsed["ranked_trace_indices"],
-            "predicted_verdict": parsed["predicted_verdict"],
+            "ranked_trace_indices": ranked_trace_indices,
+            "predicted_verdict": predicted_verdict,
             "variant": variant_name,
             "group_id": dataset_index,
         }
@@ -190,6 +262,15 @@ def main() -> None:
                     "json_parse_error": parsed["json_parse_error"],
                 }
             )
+            if pairwise_result is not None:
+                record.update(
+                    {
+                        "pairwise_scores": pairwise_result["pairwise_scores"],
+                        "num_pairwise_comparisons": pairwise_result["num_pairwise_comparisons"],
+                        "invalid_pairwise_outputs": pairwise_result["invalid_pairwise_outputs"],
+                        "pairwise_details": pairwise_result.get("pairwise_details", []),
+                    }
+                )
         predictions.append(record)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -210,6 +291,9 @@ def main() -> None:
                 "limit": args.limit,
                 "load_in_4bit": args.load_in_4bit,
                 "use_numeric_embedding": args.use_numeric_embedding,
+                "ranking_mode": args.ranking_mode,
+                "derive_verdict_from_ranking": args.derive_verdict_from_ranking or args.ranking_mode == "pairwise",
+                "verdict_top_k": args.verdict_top_k,
             },
             indent=2,
             ensure_ascii=False,

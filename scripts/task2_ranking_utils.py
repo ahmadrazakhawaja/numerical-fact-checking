@@ -43,14 +43,21 @@ def truncate_text(text: str, max_chars: int) -> str:
     return text[: max_chars - 3].rstrip() + "..."
 
 
-def render_list_block(items: Sequence[str], max_items: int, max_chars: int, header: str) -> str:
+def render_list_block(
+    items: Sequence[str],
+    max_items: int,
+    max_chars: int,
+    header: str,
+    truncate_items: bool = True,
+) -> str:
     if not items:
         return f"{header}\n- None"
 
     capped_items = list(items[:max_items]) if max_items > 0 else list(items)
     lines = [header]
     for idx, item in enumerate(capped_items):
-        lines.append(f"[{idx}] {truncate_text(str(item), max_chars)}")
+        rendered_item = truncate_text(str(item), max_chars) if truncate_items else str(item)
+        lines.append(f"[{idx}] {rendered_item}")
     if max_items > 0 and len(items) > max_items:
         lines.append(f"... {len(items) - max_items} more omitted")
     return "\n".join(lines)
@@ -83,20 +90,25 @@ def build_prompt_artifacts(
         return annotated
 
     claim_text = maybe_annotate(claim, use_numeric_embedding)
-    evidence_items = [maybe_annotate(x, use_numeric_embedding) for x in evidences]
-    trace_items = [maybe_annotate(x, use_numeric_embedding) for x in traces]
+    capped_evidences = list(evidences[:max_evidence_items]) if max_evidence_items > 0 else list(evidences)
+    evidence_display_items = [truncate_text(str(x), max_evidence_chars) for x in capped_evidences]
+    trace_display_items = [truncate_text(str(x), max_trace_chars) for x in traces]
+    evidence_items = [maybe_annotate(x, use_numeric_embedding) for x in evidence_display_items]
+    trace_items = [maybe_annotate(x, use_numeric_embedding) for x in trace_display_items]
 
     evidence_block = render_list_block(
         items=evidence_items,
         max_items=max_evidence_items,
         max_chars=max_evidence_chars,
         header="Evidence snippets:",
+        truncate_items=False,
     )
     trace_block = render_list_block(
         items=trace_items,
         max_items=0,
         max_chars=max_trace_chars,
         header="Candidate reasoning traces:",
+        truncate_items=False,
     )
     allowed_labels = ", ".join(label_space)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create validation_complete_mixed.json files with mixed-language traces."""
+"""Create mixed validation_complete files with configurable trace-language mixing."""
 
 from __future__ import annotations
 
@@ -14,14 +14,16 @@ from task2_utils import load_json_rows
 DEFAULT_LANGUAGES = ("english", "spanish", "arabic")
 DEFAULT_INPUT_FILENAME = "validation_complete.json"
 DEFAULT_OUTPUT_FILENAME = "validation_complete_mixed.json"
+DEFAULT_PAIRWISE_OUTPUT_TEMPLATE = "validation_complete_traces_{trace_language}.json"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Create mixed-language validation files where claim/evidence stay in the "
-            "target language and reasoning traces rotate across all configured "
-            "languages by trace index."
+            "target language and reasoning traces are either cycled across all "
+            "configured languages or mixed between the target language and one paired "
+            "trace language."
         )
     )
     parser.add_argument(
@@ -44,7 +46,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-filename",
         default=DEFAULT_OUTPUT_FILENAME,
-        help="Per-language output filename to write.",
+        help="Per-language output filename to write in cyclic mode.",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=("cyclic", "pairwise"),
+        default="cyclic",
+        help=(
+            "Mixing mode: cyclic across all languages, or pairwise alternating "
+            "between the target language and one paired trace language."
+        ),
+    )
+    parser.add_argument(
+        "--pairwise-output-template",
+        default=DEFAULT_PAIRWISE_OUTPUT_TEMPLATE,
+        help=(
+            "Filename template for pairwise mode. Available fields: "
+            "{target_language}, {trace_language}."
+        ),
     )
     parser.add_argument(
         "--indent",
@@ -111,7 +130,11 @@ def validate_alignment(rows_by_language: Dict[str, List[dict]]) -> None:
             )
 
 
-def build_mixed_traces(row_index: int, rows_by_language: Dict[str, List[dict]], languages: Sequence[str]) -> List[str]:
+def build_cyclic_mixed_traces(
+    row_index: int,
+    rows_by_language: Dict[str, List[dict]],
+    languages: Sequence[str],
+) -> List[str]:
     trace_count = len(rows_by_language[languages[0]][row_index]["Reasoning_traces"])
     mixed_traces: List[str] = []
 
@@ -123,7 +146,24 @@ def build_mixed_traces(row_index: int, rows_by_language: Dict[str, List[dict]], 
     return mixed_traces
 
 
-def create_mixed_rows(
+def build_pairwise_mixed_traces(
+    row_index: int,
+    rows_by_language: Dict[str, List[dict]],
+    target_language: str,
+    trace_language: str,
+) -> List[str]:
+    trace_count = len(rows_by_language[target_language][row_index]["Reasoning_traces"])
+    mixed_traces: List[str] = []
+
+    for trace_index in range(trace_count):
+        source_language = target_language if trace_index % 2 == 0 else trace_language
+        source_row = rows_by_language[source_language][row_index]
+        mixed_traces.append(source_row["Reasoning_traces"][trace_index])
+
+    return mixed_traces
+
+
+def create_cyclic_mixed_rows(
     target_language: str,
     rows_by_language: Dict[str, List[dict]],
     languages: Sequence[str],
@@ -133,7 +173,30 @@ def create_mixed_rows(
 
     for row_index, target_row in enumerate(target_rows):
         mixed_row = dict(target_row)
-        mixed_row["Reasoning_traces"] = build_mixed_traces(row_index, rows_by_language, languages)
+        mixed_row["Reasoning_traces"] = build_cyclic_mixed_traces(
+            row_index, rows_by_language, languages
+        )
+        mixed_rows.append(mixed_row)
+
+    return mixed_rows
+
+
+def create_pairwise_mixed_rows(
+    target_language: str,
+    trace_language: str,
+    rows_by_language: Dict[str, List[dict]],
+) -> List[dict]:
+    target_rows = rows_by_language[target_language]
+    mixed_rows: List[dict] = []
+
+    for row_index, target_row in enumerate(target_rows):
+        mixed_row = dict(target_row)
+        mixed_row["Reasoning_traces"] = build_pairwise_mixed_traces(
+            row_index,
+            rows_by_language,
+            target_language,
+            trace_language,
+        )
         mixed_rows.append(mixed_row)
 
     return mixed_rows
@@ -155,11 +218,34 @@ def main() -> None:
     )
     validate_alignment(rows_by_language)
 
+    if args.mode == "cyclic":
+        for target_language in args.languages:
+            output_path = language_file(args.dataset_dir, target_language, args.output_filename)
+            mixed_rows = create_cyclic_mixed_rows(target_language, rows_by_language, args.languages)
+            write_json(output_path, mixed_rows, args.indent)
+            print(f"Wrote {len(mixed_rows)} rows to {output_path}")
+        return
+
     for target_language in args.languages:
-        output_path = language_file(args.dataset_dir, target_language, args.output_filename)
-        mixed_rows = create_mixed_rows(target_language, rows_by_language, args.languages)
-        write_json(output_path, mixed_rows, args.indent)
-        print(f"Wrote {len(mixed_rows)} rows to {output_path}")
+        for trace_language in args.languages:
+            if trace_language == target_language:
+                continue
+            output_filename = args.pairwise_output_template.format(
+                target_language=target_language,
+                trace_language=trace_language,
+            )
+            output_path = language_file(args.dataset_dir, target_language, output_filename)
+            mixed_rows = create_pairwise_mixed_rows(
+                target_language=target_language,
+                trace_language=trace_language,
+                rows_by_language=rows_by_language,
+            )
+            write_json(output_path, mixed_rows, args.indent)
+            print(
+                f"Wrote {len(mixed_rows)} rows to {output_path} "
+                f"(claim/evidence={target_language}, traces alternate "
+                f"{target_language}/{trace_language})"
+            )
 
 
 if __name__ == "__main__":

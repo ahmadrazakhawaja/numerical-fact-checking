@@ -96,6 +96,12 @@ def main() -> None:
         help="Number of prompts to generate per model call in pairwise mode.",
     )
     parser.add_argument(
+        "--pairwise-orientation",
+        choices=["original", "balanced"],
+        default="balanced",
+        help="A/B assignment for pairwise comparisons. Balanced alternates which index appears as Trace A.",
+    )
+    parser.add_argument(
         "--derive-verdict-from-ranking",
         action="store_true",
         help="Derive predicted_verdict from top-k ranked trace verdicts instead of model output.",
@@ -169,6 +175,7 @@ def main() -> None:
                 top_p=args.top_p,
                 keep_pairwise_details=args.save_debug_fields,
                 batch_size=args.inference_batch_size,
+                pairwise_orientation=args.pairwise_orientation,
             )
             ranked_trace_indices = pairwise_result["ranked_trace_indices"]
             predicted_verdict = derive_verdict_from_ranking(
@@ -253,6 +260,7 @@ def main() -> None:
                 "derive_verdict_from_ranking": args.derive_verdict_from_ranking or args.ranking_mode == "pairwise",
                 "verdict_top_k": args.verdict_top_k,
                 "inference_batch_size": args.inference_batch_size,
+                "pairwise_orientation": args.pairwise_orientation,
             },
             indent=2,
             ensure_ascii=False,

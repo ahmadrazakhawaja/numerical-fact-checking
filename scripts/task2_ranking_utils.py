@@ -509,6 +509,7 @@ def generate_pairwise_ranking(
     max_numeric_chars: int = 24,
     keep_pairwise_details: bool = False,
     batch_size: int = 1,
+    pairwise_orientation: str = "original",
 ) -> Dict[str, object]:
     traces = row.get("Reasoning_traces", []) or []
     num_traces = len(traces)
@@ -520,19 +521,34 @@ def generate_pairwise_ranking(
 
     for left_index in range(num_traces):
         for right_index in range(left_index + 1, num_traces):
+            if pairwise_orientation == "original":
+                trace_a_index = left_index
+                trace_b_index = right_index
+            elif pairwise_orientation == "balanced":
+                if left_index % 2 == 0:
+                    trace_a_index = left_index
+                    trace_b_index = right_index
+                else:
+                    trace_a_index = right_index
+                    trace_b_index = left_index
+            else:
+                raise ValueError(f"Unsupported pairwise_orientation: {pairwise_orientation}")
+
             prompt_artifacts = build_pairwise_prompt_artifacts(
                 row=row,
                 max_evidence_items=max_evidence_items,
                 max_evidence_chars=max_evidence_chars,
                 max_trace_chars=max_trace_chars,
-                left_index=left_index,
-                right_index=right_index,
+                left_index=trace_a_index,
+                right_index=trace_b_index,
                 use_numeric_embedding=use_numeric_embedding,
             )
             comparisons.append(
                 {
                     "left_index": left_index,
                     "right_index": right_index,
+                    "trace_a_index": trace_a_index,
+                    "trace_b_index": trace_b_index,
                     "prompt": prompt_artifacts["prompt"],
                     "prompt_numeric_canonicals": prompt_artifacts["prompt_numeric_canonicals"],
                 }
@@ -560,10 +576,12 @@ def generate_pairwise_ranking(
             comparison_count += 1
             left_index = int(comparison["left_index"])
             right_index = int(comparison["right_index"])
+            trace_a_index = int(comparison["trace_a_index"])
+            trace_b_index = int(comparison["trace_b_index"])
             if preferred == "A":
-                scores[left_index] += 1.0
+                scores[trace_a_index] += 1.0
             elif preferred == "B":
-                scores[right_index] += 1.0
+                scores[trace_b_index] += 1.0
             else:
                 invalid_outputs += 1
                 scores[left_index] += 0.5
@@ -574,6 +592,8 @@ def generate_pairwise_ranking(
                     {
                         "left_index": left_index,
                         "right_index": right_index,
+                        "trace_a_index": trace_a_index,
+                        "trace_b_index": trace_b_index,
                         "preferred": preferred,
                         "raw_model_output": raw_output,
                     }

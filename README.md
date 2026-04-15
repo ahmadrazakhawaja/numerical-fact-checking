@@ -199,6 +199,7 @@ python scripts/infer_sft_lora.py \
   --output results/english_sft_qlora_validation_complete_pairwise_predictions.json \
   --load-in-4bit \
   --ranking-mode pairwise \
+  --pairwise-orientation balanced \
   --verdict-top-k 5 \
   --evaluate \
   --eval-output results/english_sft_qlora_validation_complete_pairwise_eval.json
@@ -214,6 +215,7 @@ python scripts/infer_sft_lora.py \
   --output results/english_sft_qlora_validation_complete_pairwise_20_predictions.json \
   --load-in-4bit \
   --ranking-mode pairwise \
+  --pairwise-orientation balanced \
   --limit 20 \
   --inference-batch-size 8 \
   --pairwise-max-new-tokens 16 \

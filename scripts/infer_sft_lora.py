@@ -103,9 +103,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--pairwise-orientation",
-        choices=["original", "balanced"],
+        choices=["original", "balanced", "bidirectional"],
         default="balanced",
-        help="A/B assignment for pairwise comparisons. Balanced alternates which index appears as Trace A.",
+        help="A/B assignment for pairwise comparisons. Bidirectional compares each pair in both orders.",
     )
     parser.add_argument(
         "--derive-verdict-from-ranking",

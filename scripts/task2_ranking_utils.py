@@ -531,30 +531,41 @@ def generate_pairwise_ranking(
                 else:
                     trace_a_index = right_index
                     trace_b_index = left_index
+            elif pairwise_orientation == "bidirectional":
+                trace_a_index = left_index
+                trace_b_index = right_index
             else:
                 raise ValueError(f"Unsupported pairwise_orientation: {pairwise_orientation}")
 
-            prompt_artifacts = build_pairwise_prompt_artifacts(
-                row=row,
-                max_evidence_items=max_evidence_items,
-                max_evidence_chars=max_evidence_chars,
-                max_trace_chars=max_trace_chars,
-                left_index=trace_a_index,
-                right_index=trace_b_index,
-                use_numeric_embedding=use_numeric_embedding,
-            )
-            comparisons.append(
-                {
-                    "left_index": left_index,
-                    "right_index": right_index,
-                    "trace_a_index": trace_a_index,
-                    "trace_b_index": trace_b_index,
-                    "prompt": prompt_artifacts["prompt"],
-                    "prompt_numeric_canonicals": prompt_artifacts["prompt_numeric_canonicals"],
-                }
-            )
+            orientations = [(trace_a_index, trace_b_index)]
+            if pairwise_orientation == "bidirectional":
+                orientations.append((right_index, left_index))
+
+            for orientation_index, (oriented_a_index, oriented_b_index) in enumerate(orientations):
+                prompt_artifacts = build_pairwise_prompt_artifacts(
+                    row=row,
+                    max_evidence_items=max_evidence_items,
+                    max_evidence_chars=max_evidence_chars,
+                    max_trace_chars=max_trace_chars,
+                    left_index=oriented_a_index,
+                    right_index=oriented_b_index,
+                    use_numeric_embedding=use_numeric_embedding,
+                )
+                comparisons.append(
+                    {
+                        "left_index": left_index,
+                        "right_index": right_index,
+                        "trace_a_index": oriented_a_index,
+                        "trace_b_index": oriented_b_index,
+                        "orientation_index": orientation_index,
+                        "prompt": prompt_artifacts["prompt"],
+                        "prompt_numeric_canonicals": prompt_artifacts["prompt_numeric_canonicals"],
+                    }
+                )
 
     batch_size = max(1, int(batch_size))
+    bidirectional_votes: Dict[Tuple[int, int], List[Optional[int]]] = {}
+    bidirectional_details: Dict[Tuple[int, int], List[Dict[str, object]]] = {}
     for start in range(0, len(comparisons), batch_size):
         batch = comparisons[start : start + batch_size]
         raw_outputs = generate_predictions_batch(
@@ -579,13 +590,36 @@ def generate_pairwise_ranking(
             trace_a_index = int(comparison["trace_a_index"])
             trace_b_index = int(comparison["trace_b_index"])
             if preferred == "A":
-                scores[trace_a_index] += 1.0
+                winner = trace_a_index
             elif preferred == "B":
-                scores[trace_b_index] += 1.0
+                winner = trace_b_index
             else:
                 invalid_outputs += 1
+                winner = None
+
+            if pairwise_orientation == "bidirectional":
+                pair_key = (left_index, right_index)
+                bidirectional_votes.setdefault(pair_key, []).append(winner)
+                if keep_pairwise_details:
+                    bidirectional_details.setdefault(pair_key, []).append(
+                        {
+                            "left_index": left_index,
+                            "right_index": right_index,
+                            "trace_a_index": trace_a_index,
+                            "trace_b_index": trace_b_index,
+                            "orientation_index": int(comparison["orientation_index"]),
+                            "preferred": preferred,
+                            "winner_index": winner,
+                            "raw_model_output": raw_output,
+                        }
+                    )
+                continue
+
+            if winner is None:
                 scores[left_index] += 0.5
                 scores[right_index] += 0.5
+            else:
+                scores[winner] += 1.0
 
             if keep_pairwise_details:
                 pairwise_details.append(
@@ -594,8 +628,34 @@ def generate_pairwise_ranking(
                         "right_index": right_index,
                         "trace_a_index": trace_a_index,
                         "trace_b_index": trace_b_index,
+                        "orientation_index": int(comparison["orientation_index"]),
                         "preferred": preferred,
+                        "winner_index": winner,
                         "raw_model_output": raw_output,
+                    }
+                )
+
+    if pairwise_orientation == "bidirectional":
+        for (left_index, right_index), winners in bidirectional_votes.items():
+            non_null_winners = [winner for winner in winners if winner is not None]
+            if len(non_null_winners) == 2 and non_null_winners[0] == non_null_winners[1]:
+                scores[non_null_winners[0]] += 1.0
+                outcome = "agree"
+                final_winner: Optional[int] = non_null_winners[0]
+            else:
+                scores[left_index] += 0.5
+                scores[right_index] += 0.5
+                outcome = "tie"
+                final_winner = None
+
+            if keep_pairwise_details:
+                pairwise_details.append(
+                    {
+                        "left_index": left_index,
+                        "right_index": right_index,
+                        "bidirectional_outcome": outcome,
+                        "winner_index": final_winner,
+                        "orientations": bidirectional_details.get((left_index, right_index), []),
                     }
                 )
 

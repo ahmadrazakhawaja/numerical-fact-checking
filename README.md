@@ -224,6 +224,25 @@ python scripts/infer_sft_lora.py \
   --eval-output results/english_sft_qlora_validation_complete_pairwise_20_eval.json
 ```
 
+Use bidirectional pairwise comparisons to counter A/B position bias. This doubles
+the number of pairwise comparisons:
+
+```bash
+python scripts/prompt_ranking_baseline.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --output results/prompt_baseline_english_validation_complete_pairwise_bidirectional_20.json \
+  --ranking-mode pairwise \
+  --pairwise-orientation bidirectional \
+  --limit 20 \
+  --inference-batch-size 8 \
+  --pairwise-max-new-tokens 16 \
+  --verdict-top-k 5 \
+  --save-debug-fields \
+  --evaluate \
+  --eval-output results/prompt_baseline_english_validation_complete_pairwise_bidirectional_20_eval.json
+```
+
 ## Mini verifier experiments (legacy 5-sample setup)
 
 Train the 3 requested settings on `dataset/english/train.json`:

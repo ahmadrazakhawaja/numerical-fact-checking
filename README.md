@@ -204,6 +204,24 @@ python scripts/infer_sft_lora.py \
   --eval-output results/english_sft_qlora_validation_complete_pairwise_eval.json
 ```
 
+Debug pairwise adapter inference on 20 claims with batched comparisons:
+
+```bash
+python scripts/infer_sft_lora.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --adapter-path checkpoints/english_sft_qlora/final_adapter \
+  --output results/english_sft_qlora_validation_complete_pairwise_20_predictions.json \
+  --load-in-4bit \
+  --ranking-mode pairwise \
+  --limit 20 \
+  --inference-batch-size 8 \
+  --pairwise-max-new-tokens 16 \
+  --verdict-top-k 5 \
+  --evaluate \
+  --eval-output results/english_sft_qlora_validation_complete_pairwise_20_eval.json
+```
+
 ## Mini verifier experiments (legacy 5-sample setup)
 
 Train the 3 requested settings on `dataset/english/train.json`:

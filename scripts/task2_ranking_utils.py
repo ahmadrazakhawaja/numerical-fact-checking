@@ -508,6 +508,7 @@ def generate_pairwise_ranking(
     num_token_id: Optional[int] = None,
     max_numeric_chars: int = 24,
     keep_pairwise_details: bool = False,
+    batch_size: int = 1,
 ) -> Dict[str, object]:
     traces = row.get("Reasoning_traces", []) or []
     num_traces = len(traces)
@@ -515,6 +516,7 @@ def generate_pairwise_ranking(
     pairwise_details: List[Dict[str, object]] = []
     invalid_outputs = 0
     comparison_count = 0
+    comparisons: List[Dict[str, object]] = []
 
     for left_index in range(num_traces):
         for right_index in range(left_index + 1, num_traces):
@@ -527,22 +529,37 @@ def generate_pairwise_ranking(
                 right_index=right_index,
                 use_numeric_embedding=use_numeric_embedding,
             )
-            raw_output = generate_prediction(
-                model=model,
-                tokenizer=tokenizer,
-                prompt=prompt_artifacts["prompt"],
-                max_new_tokens=max_new_tokens,
-                do_sample=do_sample,
-                temperature=temperature,
-                top_p=top_p,
-                prompt_numeric_canonicals=(
-                    prompt_artifacts["prompt_numeric_canonicals"] if use_numeric_embedding else None
-                ),
-                num_token_id=num_token_id if use_numeric_embedding else None,
-                max_numeric_chars=max_numeric_chars,
+            comparisons.append(
+                {
+                    "left_index": left_index,
+                    "right_index": right_index,
+                    "prompt": prompt_artifacts["prompt"],
+                    "prompt_numeric_canonicals": prompt_artifacts["prompt_numeric_canonicals"],
+                }
             )
+
+    batch_size = max(1, int(batch_size))
+    for start in range(0, len(comparisons), batch_size):
+        batch = comparisons[start : start + batch_size]
+        raw_outputs = generate_predictions_batch(
+            model=model,
+            tokenizer=tokenizer,
+            prompts=[str(item["prompt"]) for item in batch],
+            max_new_tokens=max_new_tokens,
+            do_sample=do_sample,
+            temperature=temperature,
+            top_p=top_p,
+            prompt_numeric_canonicals_list=(
+                [item["prompt_numeric_canonicals"] for item in batch] if use_numeric_embedding else None
+            ),
+            num_token_id=num_token_id if use_numeric_embedding else None,
+            max_numeric_chars=max_numeric_chars,
+        )
+        for comparison, raw_output in zip(batch, raw_outputs):
             preferred = parse_pairwise_preference(raw_output)
             comparison_count += 1
+            left_index = int(comparison["left_index"])
+            right_index = int(comparison["right_index"])
             if preferred == "A":
                 scores[left_index] += 1.0
             elif preferred == "B":
@@ -785,6 +802,156 @@ def _sample_next_token(logits: torch.Tensor, do_sample: bool, temperature: float
         return sorted_indices.gather(dim=-1, index=sampled).squeeze(-1)
 
     return torch.multinomial(probs, num_samples=1).squeeze(-1)
+
+
+def _left_pad_generation_features(
+    features: Sequence[Dict[str, List[int]]],
+    pad_token_id: int,
+    max_numeric_chars: int,
+) -> Dict[str, torch.Tensor]:
+    max_length = max(len(feature["input_ids"]) for feature in features)
+    input_ids: List[List[int]] = []
+    attention_mask: List[List[int]] = []
+    numeric_mask: List[List[int]] = []
+    numeric_char_ids: List[List[List[int]]] = []
+    has_numeric = "numeric_mask" in features[0] and "numeric_char_ids" in features[0]
+
+    for feature in features:
+        pad_len = max_length - len(feature["input_ids"])
+        input_ids.append([pad_token_id] * pad_len + feature["input_ids"])
+        attention_mask.append([0] * pad_len + feature["attention_mask"])
+        if has_numeric:
+            numeric_mask.append([0] * pad_len + feature["numeric_mask"])
+            numeric_char_ids.append(
+                ([[0] * max_numeric_chars] * pad_len) + feature["numeric_char_ids"]
+            )
+
+    output = {
+        "input_ids": torch.tensor(input_ids, dtype=torch.long),
+        "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
+    }
+    if has_numeric:
+        output["numeric_mask"] = torch.tensor(numeric_mask, dtype=torch.bool)
+        output["numeric_char_ids"] = torch.tensor(numeric_char_ids, dtype=torch.long)
+    return output
+
+
+def generate_predictions_batch(
+    model,
+    tokenizer,
+    prompts: Sequence[str],
+    max_new_tokens: int,
+    do_sample: bool,
+    temperature: float,
+    top_p: float,
+    prompt_numeric_canonicals_list: Optional[Sequence[Sequence[str]]] = None,
+    num_token_id: Optional[int] = None,
+    max_numeric_chars: int = 24,
+) -> List[str]:
+    if not prompts:
+        return []
+
+    numeric_lists: Sequence[Optional[Sequence[str]]]
+    if prompt_numeric_canonicals_list is None:
+        numeric_lists = [None] * len(prompts)
+    else:
+        if len(prompt_numeric_canonicals_list) != len(prompts):
+            raise ValueError("prompt_numeric_canonicals_list must match prompts length.")
+        numeric_lists = list(prompt_numeric_canonicals_list)
+
+    features = [
+        tokenize_prompt_for_generation(
+            tokenizer=tokenizer,
+            prompt=prompt,
+            prompt_numeric_canonicals=numeric_lists[idx],
+            num_token_id=num_token_id,
+            max_numeric_chars=max_numeric_chars,
+        )
+        for idx, prompt in enumerate(prompts)
+    ]
+    pad_token_id = tokenizer.pad_token_id
+    if pad_token_id is None:
+        pad_token_id = tokenizer.eos_token_id if tokenizer.eos_token_id is not None else 0
+
+    padded = _left_pad_generation_features(
+        features=features,
+        pad_token_id=int(pad_token_id),
+        max_numeric_chars=max_numeric_chars,
+    )
+    device = get_model_input_device(model)
+    input_ids = padded["input_ids"].to(device)
+    attention_mask = padded["attention_mask"].to(device)
+    numeric_mask = padded.get("numeric_mask")
+    numeric_char_ids = padded.get("numeric_char_ids")
+    if numeric_mask is not None:
+        numeric_mask = numeric_mask.to(device)
+        numeric_char_ids = numeric_char_ids.to(device)
+
+    eos_token_id = tokenizer.eos_token_id
+    finished = torch.zeros((len(prompts),), dtype=torch.bool, device=device)
+    generated_tokens: List[List[int]] = [[] for _ in prompts]
+
+    with torch.inference_mode():
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            numeric_mask=numeric_mask,
+            numeric_char_ids=numeric_char_ids,
+            use_cache=True,
+        )
+        past_key_values = outputs.past_key_values
+        next_token = _sample_next_token(
+            outputs.logits[:, -1, :],
+            do_sample=do_sample,
+            temperature=temperature,
+            top_p=top_p,
+        )
+
+        for _ in range(max_new_tokens):
+            if eos_token_id is not None:
+                just_finished = next_token.eq(eos_token_id)
+            else:
+                just_finished = torch.zeros_like(finished)
+
+            for row_idx, token_id in enumerate(next_token.tolist()):
+                if not bool(finished[row_idx]) and not bool(just_finished[row_idx]):
+                    generated_tokens[row_idx].append(int(token_id))
+
+            finished = finished | just_finished
+            if bool(finished.all()):
+                break
+
+            step_input_ids = next_token.clone()
+            if eos_token_id is not None:
+                step_input_ids = step_input_ids.masked_fill(finished, int(eos_token_id))
+            else:
+                step_input_ids = step_input_ids.masked_fill(finished, int(pad_token_id))
+            step_input_ids = step_input_ids.view(len(prompts), 1).to(device)
+            attention_mask = torch.cat(
+                [
+                    attention_mask,
+                    torch.ones((attention_mask.shape[0], 1), dtype=attention_mask.dtype, device=device),
+                ],
+                dim=1,
+            )
+            outputs = model(
+                input_ids=step_input_ids,
+                attention_mask=attention_mask,
+                past_key_values=past_key_values,
+                use_cache=True,
+            )
+            past_key_values = outputs.past_key_values
+            next_token = _sample_next_token(
+                outputs.logits[:, -1, :],
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+            )
+
+    return [
+        tokenizer.decode(tokens, skip_special_tokens=True).strip()
+        for tokens in generated_tokens
+    ]
 
 
 def generate_prediction(

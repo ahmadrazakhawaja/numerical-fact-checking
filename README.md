@@ -1,5 +1,49 @@
 # Numerical fact checking
 
+## Trace Scorer Baseline
+
+Train the binary trace scorer baseline on the English complete splits:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_trace_scorer.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --output-dir checkpoints/english_trace_scorer_qlora \
+  --load-in-4bit \
+  --target-modules all-linear \
+  --attn-implementation sdpa
+```
+
+Train the trace scorer with value-aware numeric embeddings enabled:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_trace_scorer.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --output-dir checkpoints/english_trace_scorer_qlora_numeric \
+  --load-in-4bit \
+  --target-modules all-linear \
+  --attn-implementation sdpa \
+  --use-numeric-embedding
+```
+
+Run inference from the saved trace scorer adapter:
+
+```bash
+python scripts/infer_trace_scorer.py \
+  --dataset-path dataset/english/validation_complete.json \
+  --language-name english \
+  --adapter-path checkpoints/english_trace_scorer_qlora/final_adapter \
+  --output results/english_trace_scorer_validation_complete_predictions.json \
+  --supervisor-output results/english_trace_scorer_validation_complete_supervisor.json \
+  --load-in-4bit \
+  --attn-implementation sdpa \
+  --evaluate \
+  --eval-output results/english_trace_scorer_validation_complete_eval.json
+```
+
 ## English SFT + LoRA
 
 Train an English-only SFT adapter on `Mistral-7B-Instruct-v0.3`:

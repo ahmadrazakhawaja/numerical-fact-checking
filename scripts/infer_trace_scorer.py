@@ -25,6 +25,7 @@ try:
     )
     from task2_ranking_utils import DEFAULT_MODEL_ID, derive_verdict_from_ranking, get_model_input_device, resolve_dtype, set_seed
     from task2_utils import infer_language_name, load_json_rows
+    from training_utils import add_reporting_args, configure_reporting, log_wandb_metrics
     from trace_scorer_utils import (
         TraceScorerDataCollator,
         build_trace_scorer_input_artifacts,
@@ -50,6 +51,7 @@ except ImportError:  # pragma: no cover - import path fallback
         set_seed,
     )
     from scripts.task2_utils import infer_language_name, load_json_rows
+    from scripts.training_utils import add_reporting_args, configure_reporting, log_wandb_metrics
     from scripts.trace_scorer_utils import (
         TraceScorerDataCollator,
         build_trace_scorer_input_artifacts,
@@ -146,6 +148,7 @@ def main() -> None:
     parser.add_argument("--evaluate", action="store_true")
     parser.add_argument("--eval-k", type=int, default=5)
     parser.add_argument("--eval-output", type=Path, default=None)
+    add_reporting_args(parser)
     add_4bit_loading_args(parser)
     add_numeric_embedding_args(parser)
     args = parser.parse_args()
@@ -154,6 +157,7 @@ def main() -> None:
         raise ValueError(f"scoring_batch_size must be > 0, got {args.scoring_batch_size}")
 
     set_seed(args.seed)
+    configure_reporting(args, args.output.parent.resolve())
     rows = load_json_rows(args.dataset_path)
     selected_rows = rows[args.start_index :]
     if args.limit is not None:
@@ -325,6 +329,25 @@ def main() -> None:
             args.eval_output.parent.mkdir(parents=True, exist_ok=True)
             with args.eval_output.open("w", encoding="utf-8") as f:
                 json.dump(metrics, f, indent=2, ensure_ascii=False)
+        log_wandb_metrics(
+            args,
+            args.output.parent.resolve(),
+            metrics,
+            prefix=f"task2/{language_name}",
+            config={
+                "adapter_path": str(args.adapter_path),
+                "model_id": args.model_id,
+                "dataset_path": str(args.dataset_path),
+                "language_name": language_name,
+                "variant_name": variant_name,
+                "output": str(args.output),
+                "eval_k": args.eval_k,
+                "verdict_top_k": args.verdict_top_k,
+                "scoring_batch_size": args.scoring_batch_size,
+                "load_in_4bit": args.load_in_4bit,
+                "use_numeric_embedding": args.use_numeric_embedding,
+            },
+        )
         print(json.dumps(metrics, indent=2, ensure_ascii=False))
 
 

@@ -39,7 +39,9 @@ try:
         tokenize_supervised_example,
     )
     from training_utils import (
+        add_reporting_args,
         build_training_arguments,
+        configure_reporting,
         maybe_limit_rows,
         parse_target_modules,
         resolve_attn_implementation,
@@ -70,7 +72,9 @@ except ImportError:  # pragma: no cover - import path fallback
         tokenize_supervised_example,
     )
     from scripts.training_utils import (
+        add_reporting_args,
         build_training_arguments,
+        configure_reporting,
         maybe_limit_rows,
         parse_target_modules,
         resolve_attn_implementation,
@@ -504,6 +508,7 @@ def main() -> None:
         help='Stored for metadata only. DPO continues training the existing SFT adapter; "all-linear" is the recommended QLoRA setting.',
     )
     parser.add_argument("--optim", type=str, default="adamw_torch")
+    add_reporting_args(parser)
     add_4bit_loading_args(parser)
     add_numeric_embedding_args(parser)
     parser.set_defaults(gradient_checkpointing=True)
@@ -511,6 +516,7 @@ def main() -> None:
 
     set_seed(args.seed)
     output_dir = args.output_dir.resolve()
+    configure_reporting(args, output_dir)
 
     train_rows = maybe_limit_rows(load_json_rows(args.train_dataset), args.limit_train)
     validation_rows = maybe_limit_rows(load_json_rows(args.validation_dataset), args.limit_validation)
@@ -625,6 +631,14 @@ def main() -> None:
                 "attn_implementation": args.attn_implementation,
                 "gradient_checkpointing": args.gradient_checkpointing,
                 "beta": args.beta,
+                "report_to": args.report_to,
+                "run_name": args.run_name,
+                "wandb_project": args.wandb_project,
+                "wandb_entity": args.wandb_entity,
+                "wandb_group": args.wandb_group,
+                "wandb_tags": args.wandb_tags,
+                "wandb_mode": args.wandb_mode,
+                "wandb_log_model": args.wandb_log_model,
             },
             "lora_config": {
                 "target_modules": parse_target_modules(args.target_modules),

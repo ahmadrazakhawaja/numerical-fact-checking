@@ -34,6 +34,54 @@ python scripts/train_trace_scorer.py \
   --attn-implementation sdpa
 ```
 
+For longer runs, enable early stopping so the final adapter is loaded from the
+best validation checkpoint instead of blindly using the last epoch:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_trace_scorer.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --output-dir checkpoints/english_trace_scorer_qlora_early_stop \
+  --load-in-4bit \
+  --target-modules all-linear \
+  --attn-implementation sdpa \
+  --num-train-epochs 4 \
+  --learning-rate 1e-4 \
+  --early-stopping-patience 1 \
+  --metric-for-best-model positive_f1
+```
+
+Early stopping requires matching save/eval strategies. The defaults already use
+`--save-strategy epoch` and `--eval-strategy epoch`.
+
+Enable Weights & Biases logging with `--report-to wandb`. The Trainer will log
+train/eval metrics at each logging/evaluation interval, and the run metadata is
+also written locally under the checkpoint directory:
+
+```bash
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True \
+python scripts/train_trace_scorer.py \
+  --train-dataset dataset/english/train_complete.json \
+  --validation-dataset dataset/english/validation_complete.json \
+  --output-dir checkpoints/english_trace_scorer_qlora_wandb \
+  --load-in-4bit \
+  --target-modules all-linear \
+  --attn-implementation sdpa \
+  --report-to wandb \
+  --run-name english-trace-scorer-qlora \
+  --wandb-project numerical-fact-checking \
+  --wandb-group trace-scorer \
+  --wandb-tags english qlora
+```
+
+Use `--wandb-mode offline` on clusters without outbound network access, then run
+`wandb sync` later from a machine with internet access.
+
+The inference script also accepts these reporting flags. When `--evaluate` is
+set, it logs the downstream Task2 metrics under keys like
+`task2/english/macro_f1` and `task2/english/recall_at_k`.
+
 Train the trace scorer with value-aware numeric embeddings enabled:
 
 ```bash

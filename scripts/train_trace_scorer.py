@@ -36,6 +36,8 @@ try:
     )
     from training_utils import (
         build_training_arguments,
+        add_reporting_args,
+        configure_reporting,
         maybe_limit_rows,
         parse_target_modules,
         resolve_attn_implementation,
@@ -65,6 +67,8 @@ except ImportError:  # pragma: no cover - import path fallback
     )
     from scripts.training_utils import (
         build_training_arguments,
+        add_reporting_args,
+        configure_reporting,
         maybe_limit_rows,
         parse_target_modules,
         resolve_attn_implementation,
@@ -73,7 +77,7 @@ except ImportError:  # pragma: no cover - import path fallback
     )
 
 
-def build_trainer(Trainer, model, training_args, train_dataset, eval_dataset, data_collator, tokenizer):
+def build_trainer(Trainer, model, training_args, train_dataset, eval_dataset, data_collator, tokenizer, callbacks=None):
     common_kwargs = {
         "model": model,
         "args": training_args,
@@ -82,6 +86,8 @@ def build_trainer(Trainer, model, training_args, train_dataset, eval_dataset, da
         "data_collator": data_collator,
         "compute_metrics": compute_binary_metrics,
     }
+    if callbacks:
+        common_kwargs["callbacks"] = callbacks
     try:
         return Trainer(processing_class=tokenizer, **common_kwargs)
     except TypeError:
@@ -113,7 +119,7 @@ def compute_binary_metrics(eval_prediction) -> dict[str, float]:
 
 def main() -> None:
     from peft import LoraConfig, TaskType, get_peft_model
-    from transformers import AutoModelForSequenceClassification, AutoTokenizer, Trainer, TrainingArguments
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer, EarlyStoppingCallback, Trainer, TrainingArguments
 
     parser = argparse.ArgumentParser(description="Train a binary trace scorer with QLoRA.")
     parser.add_argument("--train-dataset", type=Path, default=Path("dataset/english/train_complete.json"))
@@ -140,6 +146,42 @@ def main() -> None:
     parser.add_argument("--save-strategy", type=str, default="epoch", choices=["no", "steps", "epoch"])
     parser.add_argument("--eval-strategy", type=str, default="epoch", choices=["no", "steps", "epoch"])
     parser.add_argument("--save-total-limit", type=int, default=2)
+    parser.add_argument(
+        "--early-stopping-patience",
+        type=int,
+        default=0,
+        help="Stop after this many evaluations without improvement. Set 0 to disable.",
+    )
+    parser.add_argument(
+        "--early-stopping-threshold",
+        type=float,
+        default=0.0,
+        help="Minimum metric improvement required to reset early-stopping patience.",
+    )
+    parser.add_argument(
+        "--metric-for-best-model",
+        type=str,
+        default="positive_f1",
+        help="Evaluation metric used for early stopping and best-checkpoint loading.",
+    )
+    parser.add_argument(
+        "--load-best-model-at-end",
+        action="store_true",
+        help="Reload the best checkpoint before saving final_adapter. Enabled automatically with early stopping.",
+    )
+    metric_direction = parser.add_mutually_exclusive_group()
+    metric_direction.add_argument(
+        "--greater-is-better",
+        dest="greater_is_better",
+        action="store_true",
+        help="Treat larger metric values as better.",
+    )
+    metric_direction.add_argument(
+        "--lower-is-better",
+        dest="greater_is_better",
+        action="store_false",
+        help="Treat smaller metric values as better.",
+    )
     parser.add_argument("--gradient-checkpointing", dest="gradient_checkpointing", action="store_true")
     parser.add_argument("--no-gradient-checkpointing", dest="gradient_checkpointing", action="store_false")
     parser.add_argument("--lora-r", type=int, default=16)
@@ -152,13 +194,35 @@ def main() -> None:
         help='Comma-separated module names or "all-linear" for QLoRA-style coverage.',
     )
     parser.add_argument("--optim", type=str, default="adamw_torch")
+    add_reporting_args(parser)
     add_4bit_loading_args(parser)
     add_numeric_embedding_args(parser)
-    parser.set_defaults(gradient_checkpointing=True)
+    parser.set_defaults(gradient_checkpointing=True, greater_is_better=True)
     args = parser.parse_args()
+
+    if args.early_stopping_patience < 0:
+        raise ValueError(f"early_stopping_patience must be >= 0, got {args.early_stopping_patience}")
+    if args.early_stopping_threshold < 0:
+        raise ValueError(f"early_stopping_threshold must be >= 0, got {args.early_stopping_threshold}")
+    if args.early_stopping_patience > 0:
+        args.load_best_model_at_end = True
+    if args.load_best_model_at_end:
+        if args.eval_strategy == "no":
+            raise ValueError("Best-checkpoint loading/early stopping requires --eval-strategy steps or epoch.")
+        if args.save_strategy == "no":
+            raise ValueError("Best-checkpoint loading/early stopping requires --save-strategy steps or epoch.")
+        if args.eval_strategy != args.save_strategy:
+            raise ValueError(
+                "Best-checkpoint loading/early stopping requires matching --eval-strategy and --save-strategy."
+            )
 
     set_seed(args.seed)
     output_dir = args.output_dir.resolve()
+    configure_reporting(args, output_dir)
+    local_rank = int(os.environ.get("LOCAL_RANK", "-1"))
+    world_size = int(os.environ.get("WORLD_SIZE", "1"))
+    if torch.cuda.is_available() and world_size > 1 and local_rank >= 0:
+        torch.cuda.set_device(local_rank)
 
     train_rows = maybe_limit_rows(load_json_rows(args.train_dataset), args.limit_train)
     validation_rows = maybe_limit_rows(load_json_rows(args.validation_dataset), args.limit_validation)
@@ -211,6 +275,9 @@ def main() -> None:
     resolved_device_map = resolve_device_map_arg(args.device_map)
     if resolved_device_map is not None:
         model_kwargs["device_map"] = resolved_device_map
+    elif args.load_in_4bit and world_size > 1 and local_rank >= 0:
+        # In torchrun, each process must load the quantized model on its own GPU.
+        model_kwargs["device_map"] = {"": local_rank}
     resolved_attn_implementation = resolve_attn_implementation(args.attn_implementation)
     if resolved_attn_implementation is not None:
         model_kwargs["attn_implementation"] = resolved_attn_implementation
@@ -259,6 +326,14 @@ def main() -> None:
 
     collator = TraceScorerDataCollator(pad_token_id=tokenizer.pad_token_id)
     training_args = build_training_arguments(TrainingArguments, args=args, output_dir=output_dir)
+    callbacks = []
+    if args.early_stopping_patience > 0:
+        callbacks.append(
+            EarlyStoppingCallback(
+                early_stopping_patience=args.early_stopping_patience,
+                early_stopping_threshold=args.early_stopping_threshold,
+            )
+        )
     trainer = build_trainer(
         Trainer,
         model=model,
@@ -267,6 +342,7 @@ def main() -> None:
         eval_dataset=TokenizedTraceScorerDataset(validation_features) if validation_features else None,
         data_collator=collator,
         tokenizer=tokenizer,
+        callbacks=callbacks,
     )
 
     train_result = trainer.train()
@@ -278,6 +354,12 @@ def main() -> None:
     metrics = dict(train_result.metrics)
     if validation_features:
         metrics.update({f"final_{k}": v for k, v in trainer.evaluate().items()})
+    best_metric = getattr(trainer.state, "best_metric", None)
+    best_model_checkpoint = getattr(trainer.state, "best_model_checkpoint", None)
+    if best_metric is not None:
+        metrics["best_metric"] = best_metric
+    if best_model_checkpoint is not None:
+        metrics["best_model_checkpoint"] = best_model_checkpoint
     with (output_dir / "train_metrics.json").open("w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
 
@@ -300,6 +382,19 @@ def main() -> None:
             "max_claim_chars": args.max_claim_chars,
             "max_trace_chars": args.max_trace_chars,
             "target_modules": args.target_modules,
+            "report_to": args.report_to,
+            "run_name": args.run_name,
+            "wandb_project": args.wandb_project,
+            "wandb_entity": args.wandb_entity,
+            "wandb_group": args.wandb_group,
+            "wandb_tags": args.wandb_tags,
+            "wandb_mode": args.wandb_mode,
+            "wandb_log_model": args.wandb_log_model,
+            "early_stopping_patience": args.early_stopping_patience,
+            "early_stopping_threshold": args.early_stopping_threshold,
+            "load_best_model_at_end": args.load_best_model_at_end,
+            "metric_for_best_model": args.metric_for_best_model,
+            "greater_is_better": args.greater_is_better,
         },
         "train_preprocess": {
             **stats_as_dict(train_stats),
@@ -331,6 +426,9 @@ def main() -> None:
                 "validation_examples": len(validation_features),
                 "load_in_4bit": args.load_in_4bit,
                 "use_numeric_embedding": args.use_numeric_embedding,
+                "early_stopping_patience": args.early_stopping_patience,
+                "best_metric": best_metric,
+                "best_model_checkpoint": best_model_checkpoint,
             },
             indent=2,
             ensure_ascii=False,

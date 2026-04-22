@@ -74,4 +74,5 @@ dependencies = [
     "typer-slim==0.24.0",
     "typing-extensions==4.15.0",
     "urllib3==2.6.3",
+    "wandb>=0.17.0",
 ]

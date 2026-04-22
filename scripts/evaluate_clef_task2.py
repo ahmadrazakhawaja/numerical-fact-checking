@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evaluate CLEF Task 2 predictions (ranking + verdict classification).
 
-Expected prediction JSON format (list of objects):
+Accepted prediction JSON formats (list of objects):
 [
   {
     "language": "english",
@@ -9,11 +9,17 @@ Expected prediction JSON format (list of objects):
     "ranked_trace_indices": [3, 1, 2, ...],
     "predicted_verdict": "False"
   },
+  {
+    "query_id": 0,
+    "Verdict_BoN": "False",
+    "score_list": [4.2, -1.0, ...]
+  },
   ...
 ]
 
 `ranked_trace_indices` must be a permutation (or subset) of 0-based indices into
-`Reasoning_traces` for the corresponding claim. Metrics:
+`Reasoning_traces` for the corresponding claim. For submission-style rows,
+`score_list` is sorted descending to recover the ranking. Metrics:
 - Recall@k on relevant traces (relevant iff Verdict_list[i] == gold claim verdict)
 - Precision@k on relevant traces
 - Recall@k upper bound (`min(k, |relevant|) / |relevant|`)
@@ -137,20 +143,44 @@ def evaluate_predictions_against_dataset(
             limit=limit,
         )
 
-    preds = load_predictions(predictions_path)
+    default_language = resolved_language if dataset_path is not None else None
+    preds = load_predictions(predictions_path, default_language=default_language)
     return evaluate(claims, preds, k=k)
 
 
-def load_predictions(path: Path) -> Dict[Tuple[str, int], PredictionRecord]:
+def ranked_indices_from_scores(score_list: List[float]) -> List[int]:
+    return sorted(range(len(score_list)), key=lambda idx: (-float(score_list[idx]), idx))
+
+
+def load_predictions(path: Path, default_language: Optional[str] = None) -> Dict[Tuple[str, int], PredictionRecord]:
     with path.open("r", encoding="utf-8") as f:
         rows = json.load(f)
 
     preds: Dict[Tuple[str, int], PredictionRecord] = {}
     for row in rows:
-        language = str(row["language"]).strip().lower()
-        dataset_index = int(row["dataset_index"])
-        ranked = [int(i) for i in row.get("ranked_trace_indices", [])]
-        pred_verdict = normalize_label(row.get("predicted_verdict", ""))
+        raw_language = row.get("language", default_language)
+        if raw_language is None:
+            raise ValueError(
+                "Prediction rows without a language require --dataset-path/--language-name "
+                "or an explicit language field."
+            )
+        language = str(raw_language).strip().lower()
+
+        if "dataset_index" in row:
+            dataset_index = int(row["dataset_index"])
+        elif "query_id" in row:
+            dataset_index = int(row["query_id"])
+        else:
+            raise ValueError("Prediction row is missing dataset_index/query_id.")
+
+        if "ranked_trace_indices" in row:
+            ranked = [int(i) for i in row.get("ranked_trace_indices", [])]
+        elif "score_list" in row:
+            ranked = ranked_indices_from_scores([float(x) for x in row.get("score_list", [])])
+        else:
+            raise ValueError("Prediction row is missing ranked_trace_indices/score_list.")
+
+        pred_verdict = normalize_label(row.get("predicted_verdict", row.get("Verdict_BoN", "")))
         key = (language, dataset_index)
         preds[key] = PredictionRecord(
             language=language,

@@ -2,6 +2,25 @@
 
 ## Trace Scorer Baseline
 
+Create filtered training/validation copies that remove claims with zero
+label-matching traces:
+
+```bash
+python scripts/filter_zero_positive_claims.py \
+  --dataset-dir dataset \
+  --languages english spanish arabic \
+  --splits train validation \
+  --report-path results/zero_positive_filter_report.json
+```
+
+This writes:
+- `dataset/english/train_positive_only.json`
+- `dataset/english/validation_positive_only.json`
+- `dataset/spanish/train_positive_only.json`
+- `dataset/spanish/validation_positive_only.json`
+- `dataset/arabic/train_positive_only.json`
+- `dataset/arabic/validation_positive_only.json`
+
 Train the binary trace scorer baseline on the English complete splits:
 
 ```bash
@@ -36,13 +55,17 @@ python scripts/infer_trace_scorer.py \
   --dataset-path dataset/english/validation_complete.json \
   --language-name english \
   --adapter-path checkpoints/english_trace_scorer_qlora/final_adapter \
-  --output results/english_trace_scorer_validation_complete_predictions.json \
-  --supervisor-output results/english_trace_scorer_validation_complete_supervisor.json \
+  --output results/Task2_Numerical_claims_English.json \
+  --internal-output results/english_trace_scorer_validation_complete_internal.json \
   --load-in-4bit \
   --attn-implementation sdpa \
   --evaluate \
   --eval-output results/english_trace_scorer_validation_complete_eval.json
 ```
+
+`infer_trace_scorer.py` writes the required submission schema by default:
+`query_id`, `Claim`, `Verdict_BoN`, `BoN_Verdict_list`, `Reasoning_traces`, and `score_list`.
+Use `--output-format internal` only when you explicitly need the old local-debug schema.
 
 ## English SFT + LoRA
 

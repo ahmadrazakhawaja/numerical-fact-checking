@@ -79,7 +79,7 @@ def score_features_in_batches(model, collator, features: List[dict], batch_size:
     return scores
 
 
-def build_supervisor_record(row: dict, dataset_index: int, score_list: List[float], predicted_verdict: str) -> dict:
+def build_submission_record(row: dict, dataset_index: int, score_list: List[float], predicted_verdict: str) -> dict:
     cleaned_traces = [
         build_trace_scorer_input_artifacts(
             row,
@@ -93,7 +93,6 @@ def build_supervisor_record(row: dict, dataset_index: int, score_list: List[floa
     return {
         "query_id": dataset_index,
         "Claim": row.get("claim", ""),
-        "Label": row.get("label", ""),
         "Verdict_BoN": predicted_verdict,
         "BoN_Verdict_list": row.get("Verdict_list", []) or [],
         "Reasoning_traces": cleaned_traces,
@@ -111,9 +110,27 @@ def main() -> None:
     parser.add_argument("--adapter-path", type=Path, required=True)
     parser.add_argument("--model-id", type=str, default=DEFAULT_MODEL_ID)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--output-format",
+        type=str,
+        default="submission",
+        choices=["submission", "internal"],
+        help="Format for --output. 'submission' matches the CodaLab JSON schema; 'internal' keeps the local debug/eval schema.",
+    )
+    parser.add_argument(
+        "--internal-output",
+        type=Path,
+        default=None,
+        help="Optional path for the old internal prediction schema when --output-format=submission.",
+    )
     parser.add_argument("--language-name", type=str, default=None)
     parser.add_argument("--variant-name", type=str, default=None)
-    parser.add_argument("--supervisor-output", type=Path, default=None)
+    parser.add_argument(
+        "--supervisor-output",
+        type=Path,
+        default=None,
+        help="Deprecated alias for writing an additional submission-format JSON.",
+    )
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=1024)
@@ -188,8 +205,8 @@ def main() -> None:
     model.eval()
 
     collator = TraceScorerDataCollator(pad_token_id=tokenizer.pad_token_id)
-    predictions: List[dict] = []
-    supervisor_predictions: List[dict] = []
+    internal_predictions: List[dict] = []
+    submission_predictions: List[dict] = []
     num_token_id = tokenizer.convert_tokens_to_ids("<num>") if args.use_numeric_embedding else None
 
     for local_offset, row in enumerate(tqdm(selected_rows, desc="Running trace scorer inference")):
@@ -232,7 +249,7 @@ def main() -> None:
             label_space=sorted({str(x) for x in (row.get("Verdict_list", []) or []) if str(x).strip()}),
         )
 
-        record = {
+        internal_record = {
             "language": language_name,
             "dataset_index": dataset_index,
             "ranked_trace_indices": ranked_trace_indices,
@@ -242,33 +259,40 @@ def main() -> None:
             "group_id": dataset_index,
         }
         if args.save_debug_fields:
-            record["claim"] = row.get("claim", "")
-            record["cleaned_reasoning_traces"] = cleaned_traces
-        predictions.append(record)
+            internal_record["claim"] = row.get("claim", "")
+            internal_record["cleaned_reasoning_traces"] = cleaned_traces
+        internal_predictions.append(internal_record)
 
-        if args.supervisor_output is not None:
-            supervisor_predictions.append(
-                build_supervisor_record(
-                    row=row,
-                    dataset_index=dataset_index,
-                    score_list=score_list,
-                    predicted_verdict=predicted_verdict,
-                )
+        submission_predictions.append(
+            build_submission_record(
+                row=row,
+                dataset_index=dataset_index,
+                score_list=score_list,
+                predicted_verdict=predicted_verdict,
             )
+        )
 
+    predictions = submission_predictions if args.output_format == "submission" else internal_predictions
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", encoding="utf-8") as f:
         json.dump(predictions, f, indent=2, ensure_ascii=False)
 
+    if args.internal_output is not None:
+        args.internal_output.parent.mkdir(parents=True, exist_ok=True)
+        with args.internal_output.open("w", encoding="utf-8") as f:
+            json.dump(internal_predictions, f, indent=2, ensure_ascii=False)
+
     if args.supervisor_output is not None:
         args.supervisor_output.parent.mkdir(parents=True, exist_ok=True)
         with args.supervisor_output.open("w", encoding="utf-8") as f:
-            json.dump(supervisor_predictions, f, indent=2, ensure_ascii=False)
+            json.dump(submission_predictions, f, indent=2, ensure_ascii=False)
 
     print(
         json.dumps(
             {
                 "saved_predictions": str(args.output),
+                "output_format": args.output_format,
+                "internal_output": None if args.internal_output is None else str(args.internal_output),
                 "supervisor_output": None if args.supervisor_output is None else str(args.supervisor_output),
                 "adapter_path": str(args.adapter_path),
                 "model_id": args.model_id,

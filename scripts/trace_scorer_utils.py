@@ -21,11 +21,16 @@ except ImportError:  # pragma: no cover - import path fallback
 
 
 TRACE_LABEL_PATTERN = re.compile(
-    r"\[?\s*Label\s*\]?:\s*(true|false|conflicting|unknown)\b",
+    r"(?:#+\s*)?\*{0,2}\[?\s*Label\s*\]?\s*:\s*\*{0,2}\s*"
+    r"(true|false|conflicting|unknown|supports|refutes|not enough information)\b\*{0,2}",
     flags=re.IGNORECASE,
 )
 TRACE_JUSTIFICATION_MARKER_PATTERN = re.compile(
     r"\[?\s*Justification\s*\]?:\s*",
+    flags=re.IGNORECASE,
+)
+TRACE_LABEL_MARKER_PATTERN = re.compile(
+    r"(?:#+\s*)?\*{0,2}(?:Final\s+)?\[?\s*Label\s*\]?\*{0,2}\s*:\s*",
     flags=re.IGNORECASE,
 )
 TRACE_WHITESPACE_PATTERN = re.compile(r"\s+")
@@ -99,6 +104,7 @@ class TraceScorerDataCollator:
 
 def clean_reasoning_trace(trace: str) -> str:
     cleaned = TRACE_LABEL_PATTERN.sub("", str(trace))
+    cleaned = TRACE_LABEL_MARKER_PATTERN.sub("", cleaned)
     cleaned = TRACE_JUSTIFICATION_MARKER_PATTERN.sub("", cleaned)
     return TRACE_WHITESPACE_PATTERN.sub(" ", cleaned).strip()
 

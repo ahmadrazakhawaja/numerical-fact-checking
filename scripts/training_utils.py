@@ -198,6 +198,9 @@ def build_training_arguments(TrainingArguments, args, output_dir: Path):
         "report_to": normalize_report_to(getattr(args, "report_to", "none")),
         "optim": args.optim,
     }
+    ddp_find_unused_parameters = getattr(args, "ddp_find_unused_parameters", None)
+    if ddp_find_unused_parameters is not None:
+        common_kwargs["ddp_find_unused_parameters"] = ddp_find_unused_parameters
     if getattr(args, "run_name", None):
         common_kwargs["run_name"] = args.run_name
 

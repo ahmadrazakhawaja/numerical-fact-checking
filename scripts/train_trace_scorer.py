@@ -147,6 +147,12 @@ def main() -> None:
     parser.add_argument("--eval-strategy", type=str, default="epoch", choices=["no", "steps", "epoch"])
     parser.add_argument("--save-total-limit", type=int, default=2)
     parser.add_argument(
+        "--resume-from-checkpoint",
+        type=str,
+        default=None,
+        help='Resume Trainer state from a checkpoint path, or use "latest" to auto-detect the latest checkpoint.',
+    )
+    parser.add_argument(
         "--early-stopping-patience",
         type=int,
         default=0,
@@ -182,6 +188,19 @@ def main() -> None:
         action="store_false",
         help="Treat smaller metric values as better.",
     )
+    ddp_find_unused_group = parser.add_mutually_exclusive_group()
+    ddp_find_unused_group.add_argument(
+        "--ddp-find-unused-parameters",
+        dest="ddp_find_unused_parameters",
+        action="store_true",
+        help="Enable DDP unused-parameter detection. Usually slower; only use if DDP reports unused parameters.",
+    )
+    ddp_find_unused_group.add_argument(
+        "--no-ddp-find-unused-parameters",
+        dest="ddp_find_unused_parameters",
+        action="store_false",
+        help="Disable DDP unused-parameter detection for faster multi-GPU training.",
+    )
     parser.add_argument("--gradient-checkpointing", dest="gradient_checkpointing", action="store_true")
     parser.add_argument("--no-gradient-checkpointing", dest="gradient_checkpointing", action="store_false")
     parser.add_argument("--lora-r", type=int, default=16)
@@ -197,7 +216,7 @@ def main() -> None:
     add_reporting_args(parser)
     add_4bit_loading_args(parser)
     add_numeric_embedding_args(parser)
-    parser.set_defaults(gradient_checkpointing=True, greater_is_better=True)
+    parser.set_defaults(gradient_checkpointing=True, greater_is_better=True, ddp_find_unused_parameters=False)
     args = parser.parse_args()
 
     if args.early_stopping_patience < 0:
@@ -345,7 +364,14 @@ def main() -> None:
         callbacks=callbacks,
     )
 
-    train_result = trainer.train()
+    resume_from_checkpoint = None
+    if args.resume_from_checkpoint:
+        if args.resume_from_checkpoint.strip().lower() in {"1", "true", "yes", "latest", "auto"}:
+            resume_from_checkpoint = True
+        else:
+            resume_from_checkpoint = args.resume_from_checkpoint
+
+    train_result = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
     final_adapter_dir = output_dir / "final_adapter"
     trainer.model.save_pretrained(final_adapter_dir)
@@ -378,6 +404,7 @@ def main() -> None:
             "weight_decay": args.weight_decay,
             "warmup_ratio": args.warmup_ratio,
             "optim": args.optim,
+            "resume_from_checkpoint": args.resume_from_checkpoint,
             "max_length": args.max_length,
             "max_claim_chars": args.max_claim_chars,
             "max_trace_chars": args.max_trace_chars,
@@ -395,6 +422,7 @@ def main() -> None:
             "load_best_model_at_end": args.load_best_model_at_end,
             "metric_for_best_model": args.metric_for_best_model,
             "greater_is_better": args.greater_is_better,
+            "ddp_find_unused_parameters": args.ddp_find_unused_parameters,
         },
         "train_preprocess": {
             **stats_as_dict(train_stats),

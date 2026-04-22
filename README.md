@@ -82,6 +82,10 @@ The inference script also accepts these reporting flags. When `--evaluate` is
 set, it logs the downstream Task2 metrics under keys like
 `task2/english/macro_f1` and `task2/english/recall_at_k`.
 
+If the scheduler walltime expires before a long run finishes, resubmit with the
+same output directory and add `--resume-from-checkpoint latest` to continue from
+the newest saved Trainer checkpoint.
+
 Train the trace scorer with value-aware numeric embeddings enabled:
 
 ```bash

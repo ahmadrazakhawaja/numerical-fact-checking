@@ -34,6 +34,11 @@ python scripts/train_trace_scorer.py \
   --attn-implementation sdpa
 ```
 
+The trace scorer input now includes truncated evidence snippets in addition to
+the claim, trace verdict, and justification. Control this context with
+`--max-evidence-items` and `--max-evidence-chars` if you need to trade recall
+against sequence length.
+
 For longer runs, enable early stopping so the final adapter is loaded from the
 best validation checkpoint instead of blindly using the last epoch:
 

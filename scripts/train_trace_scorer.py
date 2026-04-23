@@ -130,6 +130,8 @@ def main() -> None:
     parser.add_argument("--limit-validation", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=1024)
     parser.add_argument("--max-claim-chars", type=int, default=600)
+    parser.add_argument("--max-evidence-items", type=int, default=2)
+    parser.add_argument("--max-evidence-chars", type=int, default=512)
     parser.add_argument("--max-trace-chars", type=int, default=1800)
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["auto", "bfloat16", "float16", "float32"])
     parser.add_argument("--device-map", type=str, default="none", choices=["none", "auto"])
@@ -257,6 +259,8 @@ def main() -> None:
         tokenizer=tokenizer,
         max_length=args.max_length,
         max_claim_chars=args.max_claim_chars,
+        max_evidence_items=args.max_evidence_items,
+        max_evidence_chars=args.max_evidence_chars,
         max_trace_chars=args.max_trace_chars,
         use_numeric_embedding=args.use_numeric_embedding,
         max_numeric_chars=args.max_numeric_chars,
@@ -266,6 +270,8 @@ def main() -> None:
         tokenizer=tokenizer,
         max_length=args.max_length,
         max_claim_chars=args.max_claim_chars,
+        max_evidence_items=args.max_evidence_items,
+        max_evidence_chars=args.max_evidence_chars,
         max_trace_chars=args.max_trace_chars,
         use_numeric_embedding=args.use_numeric_embedding,
         max_numeric_chars=args.max_numeric_chars,
@@ -407,6 +413,8 @@ def main() -> None:
             "resume_from_checkpoint": args.resume_from_checkpoint,
             "max_length": args.max_length,
             "max_claim_chars": args.max_claim_chars,
+            "max_evidence_items": args.max_evidence_items,
+            "max_evidence_chars": args.max_evidence_chars,
             "max_trace_chars": args.max_trace_chars,
             "target_modules": args.target_modules,
             "report_to": args.report_to,
@@ -452,6 +460,8 @@ def main() -> None:
                 "final_adapter_dir": str(final_adapter_dir),
                 "train_examples": len(train_features),
                 "validation_examples": len(validation_features),
+                "max_evidence_items": args.max_evidence_items,
+                "max_evidence_chars": args.max_evidence_chars,
                 "load_in_4bit": args.load_in_4bit,
                 "use_numeric_embedding": args.use_numeric_embedding,
                 "early_stopping_patience": args.early_stopping_patience,

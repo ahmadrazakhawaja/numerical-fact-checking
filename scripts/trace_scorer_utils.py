@@ -12,11 +12,11 @@ from torch.utils.data import Dataset
 
 try:
     from numeric_embedding_utils import annotate_numeric_text, build_numeric_dense_features
-    from task2_ranking_utils import truncate_text
+    from task2_ranking_utils import render_list_block, truncate_text
     from task2_utils import normalize_label
 except ImportError:  # pragma: no cover - import path fallback
     from scripts.numeric_embedding_utils import annotate_numeric_text, build_numeric_dense_features
-    from scripts.task2_ranking_utils import truncate_text
+    from scripts.task2_ranking_utils import render_list_block, truncate_text
     from scripts.task2_utils import normalize_label
 
 
@@ -34,7 +34,12 @@ TRACE_LABEL_MARKER_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 TRACE_WHITESPACE_PATTERN = re.compile(r"\s+")
-TRACE_SCORER_TEMPLATE = "Claim: {claim}\nVerdict: {verdict}\nJustification: {justification}"
+TRACE_SCORER_TEMPLATE = (
+    "Claim: {claim}\n"
+    "{evidence_block}\n"
+    "Verdict: {verdict}\n"
+    "Justification: {justification}"
+)
 
 
 @dataclass
@@ -114,9 +119,12 @@ def build_trace_scorer_input_artifacts(
     trace_index: int,
     *,
     max_claim_chars: int,
+    max_evidence_items: int,
+    max_evidence_chars: int,
     max_trace_chars: int,
     use_numeric_embedding: bool,
 ) -> Dict[str, object]:
+    evidences = row.get("evidences", []) or []
     verdict_list = row.get("Verdict_list", []) or []
     reasoning_traces = row.get("Reasoning_traces", []) or []
     claim = truncate_text(str(row.get("claim", "")).strip(), max_claim_chars)
@@ -125,6 +133,7 @@ def build_trace_scorer_input_artifacts(
         clean_reasoning_trace(reasoning_traces[trace_index] if trace_index < len(reasoning_traces) else ""),
         max_trace_chars,
     )
+    capped_evidences = list(evidences[:max_evidence_items]) if max_evidence_items > 0 else list(evidences)
     numeric_canonicals: List[str] = []
 
     def maybe_annotate(text: str) -> str:
@@ -134,8 +143,17 @@ def build_trace_scorer_input_artifacts(
         numeric_canonicals.extend(canonicals)
         return annotated
 
+    evidence_items = [maybe_annotate(truncate_text(str(item), max_evidence_chars)) for item in capped_evidences]
+    evidence_block = render_list_block(
+        items=evidence_items,
+        max_items=0,
+        max_chars=max_evidence_chars,
+        header="Evidence snippets:",
+        truncate_items=False,
+    )
     text = TRACE_SCORER_TEMPLATE.format(
         claim=maybe_annotate(claim),
+        evidence_block=evidence_block,
         verdict=maybe_annotate(verdict),
         justification=maybe_annotate(justification),
     )
@@ -197,6 +215,8 @@ def build_trace_scorer_features(
     tokenizer,
     max_length: int,
     max_claim_chars: int,
+    max_evidence_items: int,
+    max_evidence_chars: int,
     max_trace_chars: int,
     use_numeric_embedding: bool,
     max_numeric_chars: int,
@@ -213,6 +233,8 @@ def build_trace_scorer_features(
                 row,
                 trace_index,
                 max_claim_chars=max_claim_chars,
+                max_evidence_items=max_evidence_items,
+                max_evidence_chars=max_evidence_chars,
                 max_trace_chars=max_trace_chars,
                 use_numeric_embedding=use_numeric_embedding,
             )

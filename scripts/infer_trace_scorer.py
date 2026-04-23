@@ -81,12 +81,22 @@ def score_features_in_batches(model, collator, features: List[dict], batch_size:
     return scores
 
 
-def build_submission_record(row: dict, dataset_index: int, score_list: List[float], predicted_verdict: str) -> dict:
+def build_submission_record(
+    row: dict,
+    dataset_index: int,
+    score_list: List[float],
+    predicted_verdict: str,
+    *,
+    max_evidence_items: int,
+    max_evidence_chars: int,
+) -> dict:
     cleaned_traces = [
         build_trace_scorer_input_artifacts(
             row,
             trace_index,
             max_claim_chars=10_000,
+            max_evidence_items=max_evidence_items,
+            max_evidence_chars=max_evidence_chars,
             max_trace_chars=100_000,
             use_numeric_embedding=False,
         )["cleaned_trace"]
@@ -137,6 +147,8 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=1024)
     parser.add_argument("--max-claim-chars", type=int, default=600)
+    parser.add_argument("--max-evidence-items", type=int, default=2)
+    parser.add_argument("--max-evidence-chars", type=int, default=512)
     parser.add_argument("--max-trace-chars", type=int, default=1800)
     parser.add_argument("--scoring-batch-size", type=int, default=8)
     parser.add_argument("--verdict-top-k", type=int, default=1)
@@ -224,6 +236,8 @@ def main() -> None:
                 row,
                 trace_index,
                 max_claim_chars=args.max_claim_chars,
+                max_evidence_items=args.max_evidence_items,
+                max_evidence_chars=args.max_evidence_chars,
                 max_trace_chars=args.max_trace_chars,
                 use_numeric_embedding=args.use_numeric_embedding,
             )
@@ -273,6 +287,8 @@ def main() -> None:
                 dataset_index=dataset_index,
                 score_list=score_list,
                 predicted_verdict=predicted_verdict,
+                max_evidence_items=args.max_evidence_items,
+                max_evidence_chars=args.max_evidence_chars,
             )
         )
 
@@ -306,6 +322,8 @@ def main() -> None:
                 "num_predictions": len(predictions),
                 "start_index": args.start_index,
                 "limit": args.limit,
+                "max_evidence_items": args.max_evidence_items,
+                "max_evidence_chars": args.max_evidence_chars,
                 "load_in_4bit": args.load_in_4bit,
                 "use_numeric_embedding": args.use_numeric_embedding,
                 "verdict_top_k": args.verdict_top_k,
@@ -342,6 +360,8 @@ def main() -> None:
                 "variant_name": variant_name,
                 "output": str(args.output),
                 "eval_k": args.eval_k,
+                "max_evidence_items": args.max_evidence_items,
+                "max_evidence_chars": args.max_evidence_chars,
                 "verdict_top_k": args.verdict_top_k,
                 "scoring_batch_size": args.scoring_batch_size,
                 "load_in_4bit": args.load_in_4bit,

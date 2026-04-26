@@ -34,12 +34,7 @@ TRACE_LABEL_MARKER_PATTERN = re.compile(
     flags=re.IGNORECASE,
 )
 TRACE_WHITESPACE_PATTERN = re.compile(r"\s+")
-TRACE_SCORER_TEMPLATE = (
-    "Claim: {claim}\n"
-    "{evidence_block}\n"
-    "Verdict: {verdict}\n"
-    "Justification: {justification}"
-)
+TRACE_SCORER_TEMPLATE = "Claim: {claim}\n{body}"
 
 
 @dataclass
@@ -133,7 +128,7 @@ def build_trace_scorer_input_artifacts(
         clean_reasoning_trace(reasoning_traces[trace_index] if trace_index < len(reasoning_traces) else ""),
         max_trace_chars,
     )
-    capped_evidences = list(evidences[:max_evidence_items]) if max_evidence_items > 0 else list(evidences)
+    capped_evidences = list(evidences[:max_evidence_items]) if max_evidence_items > 0 else []
     numeric_canonicals: List[str] = []
 
     def maybe_annotate(text: str) -> str:
@@ -144,18 +139,22 @@ def build_trace_scorer_input_artifacts(
         return annotated
 
     evidence_items = [maybe_annotate(truncate_text(str(item), max_evidence_chars)) for item in capped_evidences]
-    evidence_block = render_list_block(
-        items=evidence_items,
-        max_items=0,
-        max_chars=max_evidence_chars,
-        header="Evidence snippets:",
-        truncate_items=False,
-    )
+    body_parts: List[str] = []
+    if evidence_items:
+        body_parts.append(
+            render_list_block(
+                items=evidence_items,
+                max_items=0,
+                max_chars=max_evidence_chars,
+                header="Evidence snippets:",
+                truncate_items=False,
+            )
+        )
+    body_parts.append(f"Verdict: {maybe_annotate(verdict)}")
+    body_parts.append(f"Justification: {maybe_annotate(justification)}")
     text = TRACE_SCORER_TEMPLATE.format(
         claim=maybe_annotate(claim),
-        evidence_block=evidence_block,
-        verdict=maybe_annotate(verdict),
-        justification=maybe_annotate(justification),
+        body="\n".join(body_parts),
     )
     label = int(normalize_label(verdict) == normalize_label(row.get("label", "")))
     return {

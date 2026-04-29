@@ -223,6 +223,88 @@ def build_trace_and_task2_metrics(eval_features: list[dict], eval_k: int, verdic
     return compute_metrics
 
 
+class SaveBestAdapterCallback:
+    def __init__(
+        self,
+        *,
+        output_dir: Path,
+        tokenizer,
+        metric_name: str,
+        greater_is_better: bool,
+        improvement_threshold: float = 0.0,
+        adapter_dir_name: str = "final_adapter",
+    ) -> None:
+        self.output_dir = output_dir
+        self.tokenizer = tokenizer
+        self.metric_name = metric_name
+        self.greater_is_better = greater_is_better
+        self.improvement_threshold = improvement_threshold
+        self.adapter_dir_name = adapter_dir_name
+        self.best_metric: float | None = None
+        self.best_step: int | None = None
+        self.saved_best_adapter = False
+        self._missing_metric_reported = False
+
+    def _metric_keys(self) -> list[str]:
+        stripped = self.metric_name
+        if stripped.startswith("eval_"):
+            return [stripped, stripped.removeprefix("eval_")]
+        return [f"eval_{stripped}", stripped]
+
+    def _is_improved(self, value: float) -> bool:
+        if self.best_metric is None:
+            return True
+        if self.greater_is_better:
+            return value > self.best_metric + self.improvement_threshold
+        return value < self.best_metric - self.improvement_threshold
+
+    def on_evaluate(self, args, state, control, metrics=None, model=None, **kwargs):
+        if not getattr(state, "is_world_process_zero", True):
+            return control
+        if model is None or not metrics:
+            return control
+
+        metric_value = None
+        metric_key = None
+        for key in self._metric_keys():
+            if key in metrics:
+                metric_key = key
+                metric_value = float(metrics[key])
+                break
+
+        if metric_value is None:
+            if not self._missing_metric_reported:
+                print(
+                    f"Best-adapter save skipped: metric '{self.metric_name}' was not present in eval metrics. "
+                    f"Available metrics: {sorted(metrics)}"
+                )
+                self._missing_metric_reported = True
+            return control
+
+        if not self._is_improved(metric_value):
+            return control
+
+        self.best_metric = metric_value
+        self.best_step = int(getattr(state, "global_step", 0))
+        adapter_dir = self.output_dir / self.adapter_dir_name
+        model.save_pretrained(adapter_dir)
+        self.tokenizer.save_pretrained(adapter_dir)
+        payload = {
+            "best_metric": self.best_metric,
+            "best_metric_name": metric_key,
+            "best_step": self.best_step,
+            "epoch": getattr(state, "epoch", None),
+        }
+        with (adapter_dir / "best_adapter_state.json").open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        self.saved_best_adapter = True
+        print(
+            f"Saved new best adapter to {adapter_dir} "
+            f"({metric_key}={self.best_metric:.6f}, step={self.best_step})."
+        )
+        return control
+
+
 def main() -> None:
     from peft import LoraConfig, TaskType, get_peft_model
     from transformers import AutoModelForSequenceClassification, AutoTokenizer, EarlyStoppingCallback, Trainer, TrainingArguments
@@ -300,6 +382,11 @@ def main() -> None:
         "--load-best-model-at-end",
         action="store_true",
         help="Reload the best checkpoint before saving final_adapter. Enabled automatically with early stopping.",
+    )
+    parser.add_argument(
+        "--save-best-adapter-at-each-eval",
+        action="store_true",
+        help="Update final_adapter immediately after each evaluation when metric_for_best_model improves.",
     )
     metric_direction = parser.add_mutually_exclusive_group()
     metric_direction.add_argument(
@@ -480,6 +567,18 @@ def main() -> None:
     collator = TraceScorerDataCollator(pad_token_id=tokenizer.pad_token_id)
     training_args = build_training_arguments(TrainingArguments, args=args, output_dir=output_dir)
     callbacks = []
+    best_adapter_callback = None
+    if args.save_best_adapter_at_each_eval:
+        if args.eval_strategy == "no":
+            raise ValueError("--save-best-adapter-at-each-eval requires --eval-strategy steps or epoch.")
+        best_adapter_callback = SaveBestAdapterCallback(
+            output_dir=output_dir,
+            tokenizer=tokenizer,
+            metric_name=args.metric_for_best_model,
+            greater_is_better=args.greater_is_better,
+            improvement_threshold=args.early_stopping_threshold,
+        )
+        callbacks.append(best_adapter_callback)
     if args.early_stopping_patience > 0:
         callbacks.append(
             EarlyStoppingCallback(
@@ -513,8 +612,19 @@ def main() -> None:
     train_result = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
 
     final_adapter_dir = output_dir / "final_adapter"
-    trainer.model.save_pretrained(final_adapter_dir)
-    tokenizer.save_pretrained(final_adapter_dir)
+    skip_final_save = (
+        best_adapter_callback is not None
+        and best_adapter_callback.saved_best_adapter
+        and not args.load_best_model_at_end
+    )
+    if skip_final_save:
+        print(
+            f"Keeping best adapter already saved at {final_adapter_dir}; "
+            "skipping final last-model adapter overwrite."
+        )
+    else:
+        trainer.model.save_pretrained(final_adapter_dir)
+        tokenizer.save_pretrained(final_adapter_dir)
 
     metrics = dict(train_result.metrics)
     if validation_features:
@@ -565,6 +675,7 @@ def main() -> None:
             "early_stopping_patience": args.early_stopping_patience,
             "early_stopping_threshold": args.early_stopping_threshold,
             "load_best_model_at_end": args.load_best_model_at_end,
+            "save_best_adapter_at_each_eval": args.save_best_adapter_at_each_eval,
             "metric_for_best_model": args.metric_for_best_model,
             "greater_is_better": args.greater_is_better,
             "ddp_find_unused_parameters": args.ddp_find_unused_parameters,

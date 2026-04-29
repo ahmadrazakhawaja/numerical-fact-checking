@@ -99,6 +99,7 @@ def build_submission_record(
             max_evidence_chars=max_evidence_chars,
             max_trace_chars=100_000,
             use_numeric_embedding=False,
+            append_normalized_numbers=False,
         )["cleaned_trace"]
         for trace_index in range(len(row.get("Reasoning_traces", []) or []))
     ]
@@ -150,6 +151,17 @@ def main() -> None:
     parser.add_argument("--max-evidence-items", type=int, default=2)
     parser.add_argument("--max-evidence-chars", type=int, default=512)
     parser.add_argument("--max-trace-chars", type=int, default=1800)
+    parser.add_argument(
+        "--append-normalized-numbers",
+        action="store_true",
+        help="Append compact plain-text normalized numeric hints to each scorer input.",
+    )
+    parser.add_argument(
+        "--max-normalized-numbers",
+        type=int,
+        default=20,
+        help="Maximum normalized numeric hints to append per claim/evidence/trace section.",
+    )
     parser.add_argument("--scoring-batch-size", type=int, default=8)
     parser.add_argument("--verdict-top-k", type=int, default=1)
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["auto", "bfloat16", "float16", "float32"])
@@ -240,6 +252,8 @@ def main() -> None:
                 max_evidence_chars=args.max_evidence_chars,
                 max_trace_chars=args.max_trace_chars,
                 use_numeric_embedding=args.use_numeric_embedding,
+                append_normalized_numbers=args.append_normalized_numbers,
+                max_normalized_numbers=args.max_normalized_numbers,
             )
             cleaned_traces.append(str(artifacts["cleaned_trace"]))
             encoded = tokenize_trace_scorer_input(
@@ -324,6 +338,8 @@ def main() -> None:
                 "limit": args.limit,
                 "max_evidence_items": args.max_evidence_items,
                 "max_evidence_chars": args.max_evidence_chars,
+                "append_normalized_numbers": args.append_normalized_numbers,
+                "max_normalized_numbers": args.max_normalized_numbers,
                 "load_in_4bit": args.load_in_4bit,
                 "use_numeric_embedding": args.use_numeric_embedding,
                 "verdict_top_k": args.verdict_top_k,
@@ -362,6 +378,8 @@ def main() -> None:
                 "eval_k": args.eval_k,
                 "max_evidence_items": args.max_evidence_items,
                 "max_evidence_chars": args.max_evidence_chars,
+                "append_normalized_numbers": args.append_normalized_numbers,
+                "max_normalized_numbers": args.max_normalized_numbers,
                 "verdict_top_k": args.verdict_top_k,
                 "scoring_batch_size": args.scoring_batch_size,
                 "load_in_4bit": args.load_in_4bit,

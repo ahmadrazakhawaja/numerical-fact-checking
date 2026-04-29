@@ -11,11 +11,21 @@ import torch
 from torch.utils.data import Dataset
 
 try:
-    from numeric_embedding_utils import annotate_numeric_text, build_numeric_dense_features
+    from numeric_embedding_utils import (
+        NUMERIC_PATTERN,
+        annotate_numeric_text,
+        build_numeric_dense_features,
+        canonicalize_numeric_surface,
+    )
     from task2_ranking_utils import render_list_block, truncate_text
     from task2_utils import normalize_label
 except ImportError:  # pragma: no cover - import path fallback
-    from scripts.numeric_embedding_utils import annotate_numeric_text, build_numeric_dense_features
+    from scripts.numeric_embedding_utils import (
+        NUMERIC_PATTERN,
+        annotate_numeric_text,
+        build_numeric_dense_features,
+        canonicalize_numeric_surface,
+    )
     from scripts.task2_ranking_utils import render_list_block, truncate_text
     from scripts.task2_utils import normalize_label
 
@@ -109,6 +119,71 @@ def clean_reasoning_trace(trace: str) -> str:
     return TRACE_WHITESPACE_PATTERN.sub(" ", cleaned).strip()
 
 
+def extract_normalized_number_hints(text: str, max_numbers: int) -> List[str]:
+    hints: List[str] = []
+    seen = set()
+    text = str(text)
+    if max_numbers <= 0:
+        return hints
+
+    for match in NUMERIC_PATTERN.finditer(text):
+        surface = match.group(0).strip()
+        canonical = canonicalize_numeric_surface(surface)
+        if canonical is None:
+            continue
+        if is_probable_list_marker(text, match, canonical):
+            continue
+        hint = canonical if surface == canonical else f"{surface}={canonical}"
+        if hint in seen:
+            continue
+        seen.add(hint)
+        hints.append(hint)
+        if len(hints) >= max_numbers:
+            break
+
+    return hints
+
+
+def is_probable_list_marker(text: str, match: re.Match[str], canonical: str) -> bool:
+    try:
+        value = float(canonical)
+    except ValueError:
+        return False
+    if not value.is_integer() or not 1 <= value <= 30:
+        return False
+
+    end = match.end()
+    next_char = text[end : end + 1]
+    if next_char not in {".", ")", ":"}:
+        return False
+
+    start = match.start()
+    previous = text[max(0, start - 4) : start]
+    return start == 0 or previous.endswith((" ", "\n", "\t", "- "))
+
+
+def render_normalized_number_hints(
+    *,
+    claim: str,
+    evidence_items: Sequence[str],
+    justification: str,
+    max_numbers: int,
+) -> str:
+    sections = [
+        ("Claim", claim),
+        ("Evidence", " ".join(str(item) for item in evidence_items)),
+        ("Trace", justification),
+    ]
+    lines: List[str] = []
+    for section_name, section_text in sections:
+        hints = extract_normalized_number_hints(section_text, max_numbers=max_numbers)
+        if hints:
+            lines.append(f"{section_name}: {', '.join(hints)}")
+    if not lines:
+        return ""
+    return "Normalized numbers:\n" + "\n".join(lines)
+
+
 def build_trace_scorer_input_artifacts(
     row: dict,
     trace_index: int,
@@ -118,6 +193,8 @@ def build_trace_scorer_input_artifacts(
     max_evidence_chars: int,
     max_trace_chars: int,
     use_numeric_embedding: bool,
+    append_normalized_numbers: bool = False,
+    max_normalized_numbers: int = 20,
 ) -> Dict[str, object]:
     evidences = row.get("evidences", []) or []
     verdict_list = row.get("Verdict_list", []) or []
@@ -138,7 +215,8 @@ def build_trace_scorer_input_artifacts(
         numeric_canonicals.extend(canonicals)
         return annotated
 
-    evidence_items = [maybe_annotate(truncate_text(str(item), max_evidence_chars)) for item in capped_evidences]
+    raw_evidence_items = [truncate_text(str(item), max_evidence_chars) for item in capped_evidences]
+    evidence_items = [maybe_annotate(item) for item in raw_evidence_items]
     body_parts: List[str] = []
     if evidence_items:
         body_parts.append(
@@ -150,6 +228,15 @@ def build_trace_scorer_input_artifacts(
                 truncate_items=False,
             )
         )
+    if append_normalized_numbers:
+        normalized_number_hints = render_normalized_number_hints(
+            claim=claim,
+            evidence_items=raw_evidence_items,
+            justification=justification,
+            max_numbers=max_normalized_numbers,
+        )
+        if normalized_number_hints:
+            body_parts.append(normalized_number_hints)
     body_parts.append(f"Verdict: {maybe_annotate(verdict)}")
     body_parts.append(f"Justification: {maybe_annotate(justification)}")
     text = TRACE_SCORER_TEMPLATE.format(
@@ -219,13 +306,15 @@ def build_trace_scorer_features(
     max_trace_chars: int,
     use_numeric_embedding: bool,
     max_numeric_chars: int,
+    append_normalized_numbers: bool = False,
+    max_normalized_numbers: int = 20,
     skip_short_justifications: bool = True,
 ) -> tuple[list[Dict[str, object]], TraceScorerPreprocessStats]:
     features: List[Dict[str, object]] = []
     stats = TraceScorerPreprocessStats(num_claims_seen=len(rows))
     num_token_id = tokenizer.convert_tokens_to_ids("<num>") if use_numeric_embedding else None
 
-    for row in rows:
+    for dataset_index, row in enumerate(rows):
         traces = row.get("Reasoning_traces", []) or []
         for trace_index in range(len(traces)):
             artifacts = build_trace_scorer_input_artifacts(
@@ -236,6 +325,8 @@ def build_trace_scorer_features(
                 max_evidence_chars=max_evidence_chars,
                 max_trace_chars=max_trace_chars,
                 use_numeric_embedding=use_numeric_embedding,
+                append_normalized_numbers=append_normalized_numbers,
+                max_normalized_numbers=max_normalized_numbers,
             )
             if skip_short_justifications and len(str(artifacts["cleaned_trace"]).split()) < 3:
                 stats.num_examples_skipped_empty += 1
@@ -251,6 +342,11 @@ def build_trace_scorer_features(
                 max_numeric_chars=max_numeric_chars,
             )
             encoded["trace_index"] = trace_index
+            encoded["dataset_index"] = dataset_index
+            encoded["trace_verdict"] = artifacts["trace_verdict"]
+            encoded["gold_label"] = row.get("label", "")
+            encoded["verdict_list"] = [str(verdict) for verdict in (row.get("Verdict_list", []) or [])]
+            encoded["num_traces"] = len(traces)
             features.append(encoded)
             stats.num_examples_built += 1
             stats.num_positive_examples += int(artifacts["label"])

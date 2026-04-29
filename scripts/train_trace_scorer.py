@@ -25,8 +25,8 @@ try:
         resize_model_embeddings_if_needed,
         wrap_model_with_numeric_embeddings,
     )
-    from task2_ranking_utils import DEFAULT_MODEL_ID, resolve_dtype, set_seed
-    from task2_utils import load_json_rows
+    from task2_ranking_utils import DEFAULT_MODEL_ID, derive_verdict_from_ranking, resolve_dtype, set_seed
+    from task2_utils import load_json_rows, normalize_label, safe_div
     from trace_scorer_utils import (
         TraceScorerDataCollator,
         TokenizedTraceScorerDataset,
@@ -56,8 +56,8 @@ except ImportError:  # pragma: no cover - import path fallback
         resize_model_embeddings_if_needed,
         wrap_model_with_numeric_embeddings,
     )
-    from scripts.task2_ranking_utils import DEFAULT_MODEL_ID, resolve_dtype, set_seed
-    from scripts.task2_utils import load_json_rows
+    from scripts.task2_ranking_utils import DEFAULT_MODEL_ID, derive_verdict_from_ranking, resolve_dtype, set_seed
+    from scripts.task2_utils import load_json_rows, normalize_label, safe_div
     from scripts.trace_scorer_utils import (
         TraceScorerDataCollator,
         TokenizedTraceScorerDataset,
@@ -77,14 +77,24 @@ except ImportError:  # pragma: no cover - import path fallback
     )
 
 
-def build_trainer(Trainer, model, training_args, train_dataset, eval_dataset, data_collator, tokenizer, callbacks=None):
+def build_trainer(
+    Trainer,
+    model,
+    training_args,
+    train_dataset,
+    eval_dataset,
+    data_collator,
+    tokenizer,
+    callbacks=None,
+    compute_metrics_fn=None,
+):
     common_kwargs = {
         "model": model,
         "args": training_args,
         "train_dataset": train_dataset,
         "eval_dataset": eval_dataset,
         "data_collator": data_collator,
-        "compute_metrics": compute_binary_metrics,
+        "compute_metrics": compute_metrics_fn or compute_binary_metrics,
     }
     if callbacks:
         common_kwargs["callbacks"] = callbacks
@@ -117,6 +127,102 @@ def compute_binary_metrics(eval_prediction) -> dict[str, float]:
     }
 
 
+def logits_to_scores(logits) -> np.ndarray:
+    logits = np.asarray(logits)
+    if logits.ndim == 1:
+        return logits
+    if logits.shape[-1] == 1:
+        return logits[:, 0]
+    if logits.shape[-1] == 2:
+        return logits[:, 1] - logits[:, 0]
+    raise ValueError(f"Unsupported scorer logits shape: {tuple(logits.shape)}")
+
+
+def f1_scores(y_true: list[str], y_pred: list[str], labels: list[str]) -> tuple[float, dict[str, float]]:
+    classwise: dict[str, float] = {}
+    for label in labels:
+        tp = sum(1 for true, pred in zip(y_true, y_pred) if true == label and pred == label)
+        fp = sum(1 for true, pred in zip(y_true, y_pred) if true != label and pred == label)
+        fn = sum(1 for true, pred in zip(y_true, y_pred) if true == label and pred != label)
+        precision = safe_div(tp, tp + fp)
+        recall = safe_div(tp, tp + fn)
+        classwise[label] = safe_div(2 * precision * recall, precision + recall)
+
+    return safe_div(sum(classwise.values()), len(labels)), classwise
+
+
+def recall_at_k(ranked: list[int], relevant: set[int], k: int) -> float:
+    if not relevant:
+        return 0.0
+    return sum(1 for idx in ranked[:k] if idx in relevant) / len(relevant)
+
+
+def build_trace_and_task2_metrics(eval_features: list[dict], eval_k: int, verdict_top_k: int):
+    def compute_metrics(eval_prediction) -> dict[str, float]:
+        metrics = compute_binary_metrics(eval_prediction)
+        logits = eval_prediction.predictions
+        if isinstance(logits, tuple):
+            logits = logits[0]
+        scores = logits_to_scores(logits)
+
+        grouped: dict[int, list[tuple[int, float]]] = {}
+        claim_metadata: dict[int, dict[str, object]] = {}
+        for feature, score in zip(eval_features, scores):
+            dataset_index = int(feature["dataset_index"])
+            trace_index = int(feature["trace_index"])
+            grouped.setdefault(dataset_index, []).append((trace_index, float(score)))
+            claim_metadata.setdefault(
+                dataset_index,
+                {
+                    "gold_label": normalize_label(feature.get("gold_label", "")),
+                    "verdict_list": [normalize_label(v) for v in feature.get("verdict_list", [])],
+                    "num_traces": int(feature.get("num_traces", 0)),
+                },
+            )
+
+        ranking_recall: list[float] = []
+        y_true: list[str] = []
+        y_pred: list[str] = []
+        for dataset_index, metadata in sorted(claim_metadata.items()):
+            num_traces = int(metadata["num_traces"])
+            verdict_list = list(metadata["verdict_list"])
+            gold_label = str(metadata["gold_label"])
+            scored = sorted(grouped.get(dataset_index, []), key=lambda item: (-item[1], item[0]))
+            ranked = [trace_index for trace_index, _ in scored]
+            seen = set(ranked)
+            ranked.extend(idx for idx in range(num_traces) if idx not in seen)
+
+            relevant = {idx for idx, verdict in enumerate(verdict_list) if verdict == gold_label}
+            ranking_recall.append(recall_at_k(ranked, relevant, k=eval_k))
+            y_true.append(gold_label)
+            y_pred.append(
+                normalize_label(
+                    derive_verdict_from_ranking(
+                        verdict_list=verdict_list,
+                        ranked_trace_indices=ranked,
+                        top_k=verdict_top_k,
+                        label_space=sorted({label for label in verdict_list if label}),
+                    )
+                )
+            )
+
+        labels = sorted({label for label in y_true if label})
+        macro_f1, classwise_f1 = f1_scores(y_true, y_pred, labels) if labels else (0.0, {})
+        recall = safe_div(sum(ranking_recall), len(ranking_recall))
+        metrics.update(
+            {
+                "macro_f1": macro_f1,
+                "recall_at_k": recall,
+                "macro_f1_recall_at_k_mean": 0.5 * (macro_f1 + recall),
+            }
+        )
+        for label, score in classwise_f1.items():
+            metrics[f"classwise_f1_{label}"] = score
+        return metrics
+
+    return compute_metrics
+
+
 def main() -> None:
     from peft import LoraConfig, TaskType, get_peft_model
     from transformers import AutoModelForSequenceClassification, AutoTokenizer, EarlyStoppingCallback, Trainer, TrainingArguments
@@ -133,6 +239,24 @@ def main() -> None:
     parser.add_argument("--max-evidence-items", type=int, default=2)
     parser.add_argument("--max-evidence-chars", type=int, default=512)
     parser.add_argument("--max-trace-chars", type=int, default=1800)
+    parser.add_argument(
+        "--append-normalized-numbers",
+        action="store_true",
+        help="Append compact plain-text normalized numeric hints to each scorer input.",
+    )
+    parser.add_argument(
+        "--max-normalized-numbers",
+        type=int,
+        default=20,
+        help="Maximum normalized numeric hints to append per claim/evidence/trace section.",
+    )
+    parser.add_argument("--eval-k", type=int, default=5, help="k for validation Recall@k in Task2-style metrics.")
+    parser.add_argument(
+        "--verdict-top-k",
+        type=int,
+        default=5,
+        help="Top-k ranked trace verdicts used for validation Task2-style verdict voting.",
+    )
     parser.add_argument("--dtype", type=str, default="bfloat16", choices=["auto", "bfloat16", "float16", "float32"])
     parser.add_argument("--device-map", type=str, default="none", choices=["none", "auto"])
     parser.add_argument("--attn-implementation", type=str, default="sdpa", choices=["auto", "sdpa", "eager"])
@@ -169,7 +293,7 @@ def main() -> None:
     parser.add_argument(
         "--metric-for-best-model",
         type=str,
-        default="positive_f1",
+        default="macro_f1_recall_at_k_mean",
         help="Evaluation metric used for early stopping and best-checkpoint loading.",
     )
     parser.add_argument(
@@ -264,6 +388,8 @@ def main() -> None:
         max_trace_chars=args.max_trace_chars,
         use_numeric_embedding=args.use_numeric_embedding,
         max_numeric_chars=args.max_numeric_chars,
+        append_normalized_numbers=args.append_normalized_numbers,
+        max_normalized_numbers=args.max_normalized_numbers,
     )
     validation_features, validation_stats = build_trace_scorer_features(
         validation_rows,
@@ -275,6 +401,8 @@ def main() -> None:
         max_trace_chars=args.max_trace_chars,
         use_numeric_embedding=args.use_numeric_embedding,
         max_numeric_chars=args.max_numeric_chars,
+        append_normalized_numbers=args.append_normalized_numbers,
+        max_normalized_numbers=args.max_normalized_numbers,
     )
 
     if not train_features:
@@ -368,6 +496,11 @@ def main() -> None:
         data_collator=collator,
         tokenizer=tokenizer,
         callbacks=callbacks,
+        compute_metrics_fn=build_trace_and_task2_metrics(
+            eval_features=validation_features,
+            eval_k=args.eval_k,
+            verdict_top_k=args.verdict_top_k,
+        ),
     )
 
     resume_from_checkpoint = None
@@ -416,6 +549,10 @@ def main() -> None:
             "max_evidence_items": args.max_evidence_items,
             "max_evidence_chars": args.max_evidence_chars,
             "max_trace_chars": args.max_trace_chars,
+            "append_normalized_numbers": args.append_normalized_numbers,
+            "max_normalized_numbers": args.max_normalized_numbers,
+            "eval_k": args.eval_k,
+            "verdict_top_k": args.verdict_top_k,
             "target_modules": args.target_modules,
             "report_to": args.report_to,
             "run_name": args.run_name,
@@ -462,6 +599,8 @@ def main() -> None:
                 "validation_examples": len(validation_features),
                 "max_evidence_items": args.max_evidence_items,
                 "max_evidence_chars": args.max_evidence_chars,
+                "append_normalized_numbers": args.append_normalized_numbers,
+                "max_normalized_numbers": args.max_normalized_numbers,
                 "load_in_4bit": args.load_in_4bit,
                 "use_numeric_embedding": args.use_numeric_embedding,
                 "early_stopping_patience": args.early_stopping_patience,

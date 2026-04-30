@@ -245,6 +245,14 @@ class SaveBestAdapterCallback:
         self.saved_best_adapter = False
         self._missing_metric_reported = False
 
+    def __getattr__(self, name: str):
+        if name.startswith("on_"):
+            return self._noop_callback
+        raise AttributeError(name)
+
+    def _noop_callback(self, args, state, control, **kwargs):
+        return control
+
     def _metric_keys(self) -> list[str]:
         stripped = self.metric_name
         if stripped.startswith("eval_"):

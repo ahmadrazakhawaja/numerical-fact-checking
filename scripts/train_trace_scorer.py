@@ -348,7 +348,7 @@ def main() -> None:
     parser.add_argument(
         "--max-normalized-numbers",
         type=int,
-        default=20,
+        default=100,
         help="Maximum normalized numeric hints to append per claim/evidence/trace section.",
     )
     parser.add_argument("--eval-k", type=int, default=5, help="k for validation Recall@k in Task2-style metrics.")

@@ -70,8 +70,10 @@ class TokenizedTraceScorerDataset(Dataset):
 
 
 class TraceScorerDataCollator:
-    def __init__(self, pad_token_id: int) -> None:
+    def __init__(self, pad_token_id: int, label_dtype: torch.dtype = torch.long) -> None:
         self.pad_token_id = pad_token_id
+        self.label_dtype = label_dtype
+        self.label_is_float = label_dtype in {torch.float16, torch.float32, torch.float64, torch.bfloat16}
 
     def __call__(self, features: Sequence[Dict[str, object]]) -> Dict[str, torch.Tensor]:
         max_length = max(len(feature["input_ids"]) for feature in features)
@@ -93,7 +95,7 @@ class TraceScorerDataCollator:
             input_ids.append(feature["input_ids"] + [self.pad_token_id] * pad_len)
             attention_mask.append(feature["attention_mask"] + [0] * pad_len)
             if has_labels:
-                labels.append(int(feature["labels"]))
+                labels.append(float(feature["labels"]) if self.label_is_float else int(feature["labels"]))
             if has_numeric:
                 numeric_mask.append(feature["numeric_mask"] + [0] * pad_len)
                 numeric_char_ids.append(
@@ -105,7 +107,10 @@ class TraceScorerDataCollator:
             "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
         }
         if has_labels:
-            batch["labels"] = torch.tensor(labels, dtype=torch.long)
+            label_tensor = torch.tensor(labels, dtype=self.label_dtype)
+            if self.label_is_float:
+                label_tensor = label_tensor.unsqueeze(-1)
+            batch["labels"] = label_tensor
         if has_numeric:
             batch["numeric_mask"] = torch.tensor(numeric_mask, dtype=torch.bool)
             batch["numeric_char_ids"] = torch.tensor(numeric_char_ids, dtype=torch.long)

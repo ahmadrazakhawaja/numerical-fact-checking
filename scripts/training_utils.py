@@ -198,6 +198,9 @@ def build_training_arguments(TrainingArguments, args, output_dir: Path):
         "report_to": normalize_report_to(getattr(args, "report_to", "none")),
         "optim": args.optim,
     }
+    lr_scheduler_type = getattr(args, "lr_scheduler_type", None)
+    if lr_scheduler_type:
+        common_kwargs["lr_scheduler_type"] = lr_scheduler_type
     ddp_find_unused_parameters = getattr(args, "ddp_find_unused_parameters", None)
     if ddp_find_unused_parameters is not None:
         common_kwargs["ddp_find_unused_parameters"] = ddp_find_unused_parameters

@@ -109,8 +109,12 @@ def compute_binary_metrics(eval_prediction) -> dict[str, float]:
     if isinstance(logits, tuple):
         logits = logits[0]
     labels = eval_prediction.label_ids
-    predicted = np.asarray(logits).argmax(axis=-1)
-    labels = np.asarray(labels)
+    logits = np.asarray(logits)
+    labels = np.asarray(labels).reshape(-1).astype(int)
+    if logits.ndim > 1 and logits.shape[-1] == 1:
+        predicted = (logits.reshape(-1) >= 0).astype(int)
+    else:
+        predicted = logits.argmax(axis=-1)
 
     accuracy = float((predicted == labels).mean()) if len(labels) else 0.0
     true_positive = int(((predicted == 1) & (labels == 1)).sum())
@@ -325,6 +329,13 @@ def main() -> None:
     parser.add_argument("--limit-train", type=int, default=None)
     parser.add_argument("--limit-validation", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=1024)
+    parser.add_argument(
+        "--scorer-head",
+        type=str,
+        default="ce",
+        choices=["ce", "bce"],
+        help="Use 2-logit cross-entropy scoring ('ce') or 1-logit BCE scoring ('bce').",
+    )
     parser.add_argument("--max-claim-chars", type=int, default=600)
     parser.add_argument("--max-evidence-items", type=int, default=2)
     parser.add_argument("--max-evidence-chars", type=int, default=512)
@@ -352,6 +363,13 @@ def main() -> None:
     parser.add_argument("--attn-implementation", type=str, default="sdpa", choices=["auto", "sdpa", "eager"])
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--learning-rate", type=float, default=2e-4)
+    parser.add_argument(
+        "--lr-scheduler-type",
+        type=str,
+        default=None,
+        choices=["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup", "inverse_sqrt", "reduce_lr_on_plateau"],
+        help="Optional Hugging Face Trainer LR scheduler type. Defaults to Trainer's default.",
+    )
     parser.add_argument("--num-train-epochs", type=float, default=2.0)
     parser.add_argument("--per-device-train-batch-size", type=int, default=1)
     parser.add_argument("--per-device-eval-batch-size", type=int, default=1)
@@ -518,7 +536,7 @@ def main() -> None:
     model_kwargs = {
         "torch_dtype": resolved_dtype,
         "low_cpu_mem_usage": True,
-        "num_labels": 2,
+        "num_labels": 1 if args.scorer_head == "bce" else 2,
     }
     resolved_device_map = resolve_device_map_arg(args.device_map)
     if resolved_device_map is not None:
@@ -533,6 +551,8 @@ def main() -> None:
         model_kwargs["quantization_config"] = quantization_config
 
     model = AutoModelForSequenceClassification.from_pretrained(args.model_id, **model_kwargs)
+    if args.scorer_head == "bce":
+        model.config.problem_type = "multi_label_classification"
     resize_model_embeddings_if_needed(model, tokenizer)
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.use_cache = False
@@ -572,7 +592,10 @@ def main() -> None:
         freeze_value_encoder=False,
     )
 
-    collator = TraceScorerDataCollator(pad_token_id=tokenizer.pad_token_id)
+    collator = TraceScorerDataCollator(
+        pad_token_id=tokenizer.pad_token_id,
+        label_dtype=torch.float32 if args.scorer_head == "bce" else torch.long,
+    )
     training_args = build_training_arguments(TrainingArguments, args=args, output_dir=output_dir)
     callbacks = []
     best_adapter_callback = None
@@ -654,6 +677,8 @@ def main() -> None:
         "use_numeric_embedding": args.use_numeric_embedding,
         "training_args": {
             "learning_rate": args.learning_rate,
+            "lr_scheduler_type": args.lr_scheduler_type,
+            "scorer_head": args.scorer_head,
             "num_train_epochs": args.num_train_epochs,
             "per_device_train_batch_size": args.per_device_train_batch_size,
             "per_device_eval_batch_size": args.per_device_eval_batch_size,

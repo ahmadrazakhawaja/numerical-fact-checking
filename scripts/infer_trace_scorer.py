@@ -147,6 +147,13 @@ def main() -> None:
     parser.add_argument("--start-index", type=int, default=0)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=1024)
+    parser.add_argument(
+        "--scorer-head",
+        type=str,
+        default="ce",
+        choices=["ce", "bce"],
+        help="Head used when training the adapter: 2-logit CE ('ce') or 1-logit BCE ('bce').",
+    )
     parser.add_argument("--max-claim-chars", type=int, default=600)
     parser.add_argument("--max-evidence-items", type=int, default=2)
     parser.add_argument("--max-evidence-chars", type=int, default=512)
@@ -209,7 +216,7 @@ def main() -> None:
         "torch_dtype": resolved_dtype,
         "device_map": args.device_map,
         "low_cpu_mem_usage": True,
-        "num_labels": 2,
+        "num_labels": 1 if args.scorer_head == "bce" else 2,
     }
     if args.attn_implementation != "auto":
         model_kwargs["attn_implementation"] = args.attn_implementation
@@ -217,6 +224,8 @@ def main() -> None:
         model_kwargs["quantization_config"] = quantization_config
 
     base_model = AutoModelForSequenceClassification.from_pretrained(args.model_id, **model_kwargs)
+    if args.scorer_head == "bce":
+        base_model.config.problem_type = "multi_label_classification"
     resize_model_embeddings_if_needed(base_model, tokenizer)
     base_model.config.pad_token_id = tokenizer.pad_token_id
     model = PeftModel.from_pretrained(base_model, str(args.adapter_path))
@@ -330,6 +339,7 @@ def main() -> None:
                 "supervisor_output": None if args.supervisor_output is None else str(args.supervisor_output),
                 "adapter_path": str(args.adapter_path),
                 "model_id": args.model_id,
+                "scorer_head": args.scorer_head,
                 "dataset_path": str(args.dataset_path),
                 "language_name": language_name,
                 "variant_name": variant_name,
@@ -372,6 +382,7 @@ def main() -> None:
                 "adapter_path": str(args.adapter_path),
                 "model_id": args.model_id,
                 "dataset_path": str(args.dataset_path),
+                "scorer_head": args.scorer_head,
                 "language_name": language_name,
                 "variant_name": variant_name,
                 "output": str(args.output),

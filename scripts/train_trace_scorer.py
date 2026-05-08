@@ -12,6 +12,7 @@ os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 try:
     from hf_quantization_utils import (
@@ -28,6 +29,7 @@ try:
     from task2_ranking_utils import DEFAULT_MODEL_ID, derive_verdict_from_ranking, resolve_dtype, set_seed
     from task2_utils import load_json_rows, normalize_label, safe_div
     from trace_scorer_utils import (
+        GroupedTraceScorerDataset,
         TraceScorerDataCollator,
         TokenizedTraceScorerDataset,
         average_sequence_length,
@@ -59,6 +61,7 @@ except ImportError:  # pragma: no cover - import path fallback
     from scripts.task2_ranking_utils import DEFAULT_MODEL_ID, derive_verdict_from_ranking, resolve_dtype, set_seed
     from scripts.task2_utils import load_json_rows, normalize_label, safe_div
     from scripts.trace_scorer_utils import (
+        GroupedTraceScorerDataset,
         TraceScorerDataCollator,
         TokenizedTraceScorerDataset,
         average_sequence_length,
@@ -104,6 +107,144 @@ def build_trainer(
         return Trainer(tokenizer=tokenizer, **common_kwargs)
 
 
+def parse_named_dataset_paths(values: list[str] | None) -> dict[str, Path]:
+    if not values:
+        return {}
+    parsed: dict[str, Path] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"Expected LANGUAGE=PATH, got: {value}")
+        language, path = value.split("=", 1)
+        language = language.strip().lower()
+        if not language:
+            raise ValueError(f"Missing language name in dataset argument: {value}")
+        if language in parsed:
+            raise ValueError(f"Duplicate language dataset argument: {language}")
+        parsed[language] = Path(path)
+    return parsed
+
+
+def torch_logits_to_scores(logits: torch.Tensor) -> torch.Tensor:
+    if logits.ndim == 1:
+        return logits
+    if logits.shape[-1] == 1:
+        return logits[:, 0]
+    if logits.shape[-1] == 2:
+        return logits[:, 1] - logits[:, 0]
+    raise ValueError(f"Unsupported scorer logits shape: {tuple(logits.shape)}")
+
+
+def normalize_score_vector(scores: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
+    if scores.numel() <= 1:
+        return scores - scores.mean()
+    return (scores - scores.mean()) / (scores.std(unbiased=False) + eps)
+
+
+def compute_language_invariance_loss(
+    scores: torch.Tensor,
+    dataset_indices: torch.Tensor,
+    trace_indices: torch.Tensor,
+    language_ids: torch.Tensor,
+) -> torch.Tensor:
+    losses: list[torch.Tensor] = []
+    for dataset_index in torch.unique(dataset_indices):
+        group_mask = dataset_indices == dataset_index
+        group_languages = torch.unique(language_ids[group_mask])
+        if group_languages.numel() < 2:
+            continue
+
+        language_scores: dict[int, dict[int, torch.Tensor]] = {}
+        common_trace_ids: set[int] | None = None
+        for language_id_tensor in group_languages:
+            language_id = int(language_id_tensor.item())
+            language_mask = group_mask & (language_ids == language_id_tensor)
+            trace_to_score = {
+                int(trace_id.item()): score
+                for trace_id, score in zip(trace_indices[language_mask], scores[language_mask])
+            }
+            if not trace_to_score:
+                continue
+            language_scores[language_id] = trace_to_score
+            trace_id_set = set(trace_to_score)
+            common_trace_ids = trace_id_set if common_trace_ids is None else common_trace_ids & trace_id_set
+
+        if not common_trace_ids or len(language_scores) < 2:
+            continue
+
+        ordered_trace_ids = sorted(common_trace_ids)
+        vectors = [
+            normalize_score_vector(torch.stack([trace_scores[idx] for idx in ordered_trace_ids]))
+            for _, trace_scores in sorted(language_scores.items())
+        ]
+        for left_idx in range(len(vectors)):
+            for right_idx in range(left_idx + 1, len(vectors)):
+                losses.append(F.mse_loss(vectors[left_idx], vectors[right_idx]))
+
+    if not losses:
+        return scores.new_zeros(())
+    return torch.stack(losses).mean()
+
+
+class LanguageInvariantTraceScorerTrainer:
+    def __init__(
+        self,
+        base_trainer_cls,
+        *,
+        language_invariance_weight: float,
+        language_invariance_warmup_ratio: float,
+    ):
+        class _Trainer(base_trainer_cls):
+            def _current_language_invariance_weight(inner_self) -> float:
+                target = float(language_invariance_weight)
+                warmup_ratio = float(language_invariance_warmup_ratio)
+                if target <= 0.0:
+                    return 0.0
+                max_steps = int(getattr(inner_self.state, "max_steps", 0) or 0)
+                warmup_steps = int(max_steps * warmup_ratio)
+                if warmup_steps <= 0:
+                    return target
+                step = int(getattr(inner_self.state, "global_step", 0) or 0)
+                return target if step >= warmup_steps else target * safe_div(step, warmup_steps)
+
+            def compute_loss(inner_self, model, inputs, return_outputs=False, **kwargs):
+                dataset_indices = inputs.pop("dataset_index", None)
+                trace_indices = inputs.pop("trace_index", None)
+                language_ids = inputs.pop("language_id", None)
+                inputs.pop("num_traces", None)
+
+                outputs = model(**inputs)
+                ranking_loss = outputs.loss
+                invariance_loss = ranking_loss.new_zeros(())
+                lambda_inv = inner_self._current_language_invariance_weight()
+
+                if (
+                    lambda_inv > 0.0
+                    and dataset_indices is not None
+                    and trace_indices is not None
+                    and language_ids is not None
+                ):
+                    scores = torch_logits_to_scores(outputs.logits)
+                    invariance_loss = compute_language_invariance_loss(
+                        scores=scores,
+                        dataset_indices=dataset_indices.to(scores.device),
+                        trace_indices=trace_indices.to(scores.device),
+                        language_ids=language_ids.to(scores.device),
+                    )
+
+                loss = ranking_loss + (float(lambda_inv) * invariance_loss)
+                if inner_self.state.global_step % max(1, inner_self.args.logging_steps) == 0:
+                    inner_self.log(
+                        {
+                            "ranking_loss": float(ranking_loss.detach().cpu()),
+                            "language_invariance_loss": float(invariance_loss.detach().cpu()),
+                            "lambda_inv": float(lambda_inv),
+                        }
+                    )
+                return (loss, outputs) if return_outputs else loss
+
+        self.cls = _Trainer
+
+
 def compute_binary_metrics(eval_prediction) -> dict[str, float]:
     logits = eval_prediction.predictions
     if isinstance(logits, tuple):
@@ -128,6 +269,127 @@ def compute_binary_metrics(eval_prediction) -> dict[str, float]:
         "positive_precision": precision,
         "positive_recall": recall,
         "positive_f1": f1,
+    }
+
+
+def add_language_metadata(
+    features: list[dict],
+    *,
+    language: str,
+    language_id: int,
+) -> list[dict]:
+    enriched = []
+    for feature in features:
+        item = dict(feature)
+        item["language"] = language
+        item["language_id"] = language_id
+        enriched.append(item)
+    return enriched
+
+
+def build_aligned_multilingual_groups(
+    features_by_language: dict[str, list[dict]],
+    language_to_id: dict[str, int],
+) -> tuple[list[list[dict]], list[dict], dict[str, int]]:
+    by_language_claim: dict[str, dict[int, dict[int, dict]]] = {}
+    for language, features in features_by_language.items():
+        claims: dict[int, dict[int, dict]] = {}
+        for feature in features:
+            dataset_index = int(feature["dataset_index"])
+            trace_index = int(feature["trace_index"])
+            claims.setdefault(dataset_index, {})[trace_index] = feature
+        by_language_claim[language] = claims
+
+    languages = list(features_by_language)
+    common_claims = set(by_language_claim[languages[0]])
+    for language in languages[1:]:
+        common_claims &= set(by_language_claim[language])
+
+    groups: list[list[dict]] = []
+    skipped_no_common_traces = 0
+    for dataset_index in sorted(common_claims):
+        common_trace_indices = set(by_language_claim[languages[0]][dataset_index])
+        for language in languages[1:]:
+            common_trace_indices &= set(by_language_claim[language][dataset_index])
+        if not common_trace_indices:
+            skipped_no_common_traces += 1
+            continue
+
+        group: list[dict] = []
+        for language in sorted(languages, key=lambda name: language_to_id[name]):
+            for trace_index in sorted(common_trace_indices):
+                group.append(by_language_claim[language][dataset_index][trace_index])
+        groups.append(group)
+
+    flat_features = [feature for group in groups for feature in group]
+    stats = {
+        "num_languages": len(languages),
+        "num_complete_claim_groups": len(groups),
+        "num_flat_examples": len(flat_features),
+        "num_claims_skipped_no_common_traces": skipped_no_common_traces,
+    }
+    return groups, flat_features, stats
+
+
+def numpy_normalize_score_vector(values: list[float], eps: float = 1e-6) -> np.ndarray:
+    vector = np.asarray(values, dtype=np.float64)
+    if vector.size == 0:
+        return vector
+    return (vector - vector.mean()) / (vector.std() + eps)
+
+
+def compute_multilingual_invariance_metrics(
+    eval_features: list[dict],
+    scores: np.ndarray,
+    language_names: list[str],
+) -> dict[str, float]:
+    by_claim: dict[int, dict[int, dict[int, float]]] = {}
+    language_id_to_name = {idx: name for idx, name in enumerate(language_names)}
+    for feature, score in zip(eval_features, scores):
+        dataset_index = int(feature["dataset_index"])
+        language_id = int(feature["language_id"])
+        trace_index = int(feature["trace_index"])
+        by_claim.setdefault(dataset_index, {}).setdefault(language_id, {})[trace_index] = float(score)
+
+    pair_losses: dict[tuple[int, int], list[float]] = {}
+    all_losses: list[float] = []
+    for language_left in range(len(language_names)):
+        for language_right in range(language_left + 1, len(language_names)):
+            pair_losses[(language_left, language_right)] = []
+
+    for language_scores in by_claim.values():
+        for language_left in range(len(language_names)):
+            for language_right in range(language_left + 1, len(language_names)):
+                left_scores = language_scores.get(language_left)
+                right_scores = language_scores.get(language_right)
+                if not left_scores or not right_scores:
+                    continue
+                common_trace_indices = sorted(set(left_scores) & set(right_scores))
+                if not common_trace_indices:
+                    continue
+                left_vector = numpy_normalize_score_vector([left_scores[idx] for idx in common_trace_indices])
+                right_vector = numpy_normalize_score_vector([right_scores[idx] for idx in common_trace_indices])
+                loss = float(np.mean((left_vector - right_vector) ** 2))
+                pair_losses[(language_left, language_right)].append(loss)
+                all_losses.append(loss)
+
+    metrics: dict[str, float] = {
+        "language_invariance_mse": safe_div(sum(all_losses), len(all_losses)),
+        "language_invariance_num_pairs": float(len(all_losses)),
+    }
+    for (language_left, language_right), values in pair_losses.items():
+        left_name = language_id_to_name[language_left]
+        right_name = language_id_to_name[language_right]
+        metrics[f"language_invariance_mse_{left_name}_{right_name}"] = safe_div(sum(values), len(values))
+    return metrics
+
+
+def preprocess_stats_payload(stats) -> dict[str, object]:
+    if isinstance(stats, dict):
+        return stats
+    return {
+        **stats_as_dict(stats),
+        "average_sequence_length": average_sequence_length(stats),
     }
 
 
@@ -222,6 +484,97 @@ def build_trace_and_task2_metrics(eval_features: list[dict], eval_k: int, verdic
         )
         for label, score in classwise_f1.items():
             metrics[f"classwise_f1_{label}"] = score
+        return metrics
+
+    return compute_metrics
+
+
+def build_multilingual_trace_and_task2_metrics(
+    eval_features: list[dict],
+    eval_k: int,
+    verdict_top_k: int,
+    language_names: list[str],
+):
+    def compute_metrics(eval_prediction) -> dict[str, float]:
+        metrics = compute_binary_metrics(eval_prediction)
+        logits = eval_prediction.predictions
+        if isinstance(logits, tuple):
+            logits = logits[0]
+        scores = logits_to_scores(logits)
+
+        grouped: dict[tuple[int, int], list[tuple[int, float]]] = {}
+        claim_metadata: dict[tuple[int, int], dict[str, object]] = {}
+        language_id_to_name = {idx: name for idx, name in enumerate(language_names)}
+        for feature, score in zip(eval_features, scores):
+            language_id = int(feature["language_id"])
+            dataset_index = int(feature["dataset_index"])
+            trace_index = int(feature["trace_index"])
+            key = (language_id, dataset_index)
+            grouped.setdefault(key, []).append((trace_index, float(score)))
+            claim_metadata.setdefault(
+                key,
+                {
+                    "gold_label": normalize_label(feature.get("gold_label", "")),
+                    "verdict_list": [normalize_label(v) for v in feature.get("verdict_list", [])],
+                    "num_traces": int(feature.get("num_traces", 0)),
+                },
+            )
+
+        ranking_recall_by_language: dict[int, list[float]] = {}
+        y_true_by_language: dict[int, list[str]] = {}
+        y_pred_by_language: dict[int, list[str]] = {}
+
+        for key, metadata in sorted(claim_metadata.items()):
+            language_id, _dataset_index = key
+            num_traces = int(metadata["num_traces"])
+            verdict_list = list(metadata["verdict_list"])
+            gold_label = str(metadata["gold_label"])
+            scored = sorted(grouped.get(key, []), key=lambda item: (-item[1], item[0]))
+            ranked = [trace_index for trace_index, _ in scored]
+            seen = set(ranked)
+            ranked.extend(idx for idx in range(num_traces) if idx not in seen)
+
+            relevant = {idx for idx, verdict in enumerate(verdict_list) if verdict == gold_label}
+            ranking_recall_by_language.setdefault(language_id, []).append(recall_at_k(ranked, relevant, k=eval_k))
+            y_true_by_language.setdefault(language_id, []).append(gold_label)
+            y_pred_by_language.setdefault(language_id, []).append(
+                normalize_label(
+                    derive_verdict_from_ranking(
+                        verdict_list=verdict_list,
+                        ranked_trace_indices=ranked,
+                        top_k=verdict_top_k,
+                        label_space=sorted({label for label in verdict_list if label}),
+                    )
+                )
+            )
+
+        macro_f1_values: list[float] = []
+        recall_values: list[float] = []
+        for language_id, language_name in language_id_to_name.items():
+            y_true = y_true_by_language.get(language_id, [])
+            y_pred = y_pred_by_language.get(language_id, [])
+            labels = sorted({label for label in y_true if label})
+            macro_f1, _classwise_f1 = f1_scores(y_true, y_pred, labels) if labels else (0.0, {})
+            recall = safe_div(
+                sum(ranking_recall_by_language.get(language_id, [])),
+                len(ranking_recall_by_language.get(language_id, [])),
+            )
+            metrics[f"{language_name}_macro_f1"] = macro_f1
+            metrics[f"{language_name}_recall_at_k"] = recall
+            metrics[f"{language_name}_macro_f1_recall_at_k_mean"] = 0.5 * (macro_f1 + recall)
+            macro_f1_values.append(macro_f1)
+            recall_values.append(recall)
+
+        mean_macro_f1 = safe_div(sum(macro_f1_values), len(macro_f1_values))
+        mean_recall = safe_div(sum(recall_values), len(recall_values))
+        metrics.update(
+            {
+                "macro_f1": mean_macro_f1,
+                "recall_at_k": mean_recall,
+                "macro_f1_recall_at_k_mean": 0.5 * (mean_macro_f1 + mean_recall),
+            }
+        )
+        metrics.update(compute_multilingual_invariance_metrics(eval_features, scores, language_names))
         return metrics
 
     return compute_metrics
@@ -324,6 +677,33 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Train a binary trace scorer with QLoRA.")
     parser.add_argument("--train-dataset", type=Path, default=Path("dataset/english/train_complete.json"))
     parser.add_argument("--validation-dataset", type=Path, default=Path("dataset/english/validation_complete.json"))
+    parser.add_argument(
+        "--train-datasets",
+        nargs="+",
+        default=None,
+        help=(
+            "Aligned multilingual training datasets as LANGUAGE=PATH entries. "
+            "Example: english=dataset/english/train.json spanish=dataset/spanish/train.json arabic=dataset/arabic/train.json"
+        ),
+    )
+    parser.add_argument(
+        "--validation-datasets",
+        nargs="+",
+        default=None,
+        help="Aligned multilingual validation datasets as LANGUAGE=PATH entries.",
+    )
+    parser.add_argument(
+        "--language-invariance-weight",
+        type=float,
+        default=0.0,
+        help="Target lambda for score-invariance loss across aligned languages. Set >0 to enable.",
+    )
+    parser.add_argument(
+        "--language-invariance-warmup-ratio",
+        type=float,
+        default=0.2,
+        help="Fraction of total training steps used to linearly warm lambda_inv from 0 to target.",
+    )
     parser.add_argument("--model-id", type=str, default=DEFAULT_MODEL_ID)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--limit-train", type=int, default=None)
@@ -464,6 +844,23 @@ def main() -> None:
         raise ValueError(f"early_stopping_threshold must be >= 0, got {args.early_stopping_threshold}")
     if args.early_stopping_patience > 0:
         args.load_best_model_at_end = True
+    if args.language_invariance_weight < 0:
+        raise ValueError(f"language_invariance_weight must be >= 0, got {args.language_invariance_weight}")
+    if not 0 <= args.language_invariance_warmup_ratio <= 1:
+        raise ValueError(
+            "language_invariance_warmup_ratio must be between 0 and 1, "
+            f"got {args.language_invariance_warmup_ratio}"
+        )
+    train_dataset_paths = parse_named_dataset_paths(args.train_datasets)
+    validation_dataset_paths = parse_named_dataset_paths(args.validation_datasets)
+    use_multilingual_training = bool(train_dataset_paths)
+    if bool(train_dataset_paths) != bool(validation_dataset_paths):
+        raise ValueError("--train-datasets and --validation-datasets must be provided together.")
+    if use_multilingual_training:
+        if set(train_dataset_paths) != set(validation_dataset_paths):
+            raise ValueError("--train-datasets and --validation-datasets must contain the same languages.")
+        if len(train_dataset_paths) < 2:
+            raise ValueError("Multilingual invariance training requires at least two languages.")
     if args.load_best_model_at_end:
         if args.eval_strategy == "no":
             raise ValueError("Best-checkpoint loading/early stopping requires --eval-strategy steps or epoch.")
@@ -482,46 +879,131 @@ def main() -> None:
     if torch.cuda.is_available() and world_size > 1 and local_rank >= 0:
         torch.cuda.set_device(local_rank)
 
-    train_rows = maybe_limit_rows(load_json_rows(args.train_dataset), args.limit_train)
-    validation_rows = maybe_limit_rows(load_json_rows(args.validation_dataset), args.limit_validation)
-
     tokenizer = AutoTokenizer.from_pretrained(args.model_id)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     if args.use_numeric_embedding:
         ensure_numeric_token(tokenizer)
 
-    train_features, train_stats = build_trace_scorer_features(
-        train_rows,
-        tokenizer=tokenizer,
-        max_length=args.max_length,
-        max_claim_chars=args.max_claim_chars,
-        max_evidence_items=args.max_evidence_items,
-        max_evidence_chars=args.max_evidence_chars,
-        max_trace_chars=args.max_trace_chars,
-        use_numeric_embedding=args.use_numeric_embedding,
-        max_numeric_chars=args.max_numeric_chars,
-        append_normalized_numbers=args.append_normalized_numbers,
-        max_normalized_numbers=args.max_normalized_numbers,
-    )
-    validation_features, validation_stats = build_trace_scorer_features(
-        validation_rows,
-        tokenizer=tokenizer,
-        max_length=args.max_length,
-        max_claim_chars=args.max_claim_chars,
-        max_evidence_items=args.max_evidence_items,
-        max_evidence_chars=args.max_evidence_chars,
-        max_trace_chars=args.max_trace_chars,
-        use_numeric_embedding=args.use_numeric_embedding,
-        max_numeric_chars=args.max_numeric_chars,
-        append_normalized_numbers=args.append_normalized_numbers,
-        max_normalized_numbers=args.max_normalized_numbers,
-    )
+    language_names: list[str] = []
+    train_groups: list[list[dict]] | None = None
+    validation_groups: list[list[dict]] | None = None
+    multilingual_group_stats: dict[str, object] = {}
+
+    if use_multilingual_training:
+        language_names = list(train_dataset_paths)
+        language_to_id = {language: idx for idx, language in enumerate(language_names)}
+        train_features_by_language: dict[str, list[dict]] = {}
+        validation_features_by_language: dict[str, list[dict]] = {}
+        train_stats_by_language: dict[str, object] = {}
+        validation_stats_by_language: dict[str, object] = {}
+
+        for language in language_names:
+            train_rows = maybe_limit_rows(load_json_rows(train_dataset_paths[language]), args.limit_train)
+            validation_rows = maybe_limit_rows(
+                load_json_rows(validation_dataset_paths[language]),
+                args.limit_validation,
+            )
+            language_train_features, language_train_stats = build_trace_scorer_features(
+                train_rows,
+                tokenizer=tokenizer,
+                max_length=args.max_length,
+                max_claim_chars=args.max_claim_chars,
+                max_evidence_items=args.max_evidence_items,
+                max_evidence_chars=args.max_evidence_chars,
+                max_trace_chars=args.max_trace_chars,
+                use_numeric_embedding=args.use_numeric_embedding,
+                max_numeric_chars=args.max_numeric_chars,
+                append_normalized_numbers=args.append_normalized_numbers,
+                max_normalized_numbers=args.max_normalized_numbers,
+            )
+            language_validation_features, language_validation_stats = build_trace_scorer_features(
+                validation_rows,
+                tokenizer=tokenizer,
+                max_length=args.max_length,
+                max_claim_chars=args.max_claim_chars,
+                max_evidence_items=args.max_evidence_items,
+                max_evidence_chars=args.max_evidence_chars,
+                max_trace_chars=args.max_trace_chars,
+                use_numeric_embedding=args.use_numeric_embedding,
+                max_numeric_chars=args.max_numeric_chars,
+                append_normalized_numbers=args.append_normalized_numbers,
+                max_normalized_numbers=args.max_normalized_numbers,
+            )
+            train_features_by_language[language] = add_language_metadata(
+                language_train_features,
+                language=language,
+                language_id=language_to_id[language],
+            )
+            validation_features_by_language[language] = add_language_metadata(
+                language_validation_features,
+                language=language,
+                language_id=language_to_id[language],
+            )
+            train_stats_by_language[language] = stats_as_dict(language_train_stats)
+            validation_stats_by_language[language] = stats_as_dict(language_validation_stats)
+
+        train_groups, train_features, train_group_stats = build_aligned_multilingual_groups(
+            train_features_by_language,
+            language_to_id,
+        )
+        validation_groups, validation_features, validation_group_stats = build_aligned_multilingual_groups(
+            validation_features_by_language,
+            language_to_id,
+        )
+        train_stats = {
+            "by_language": train_stats_by_language,
+            "aligned_groups": train_group_stats,
+        }
+        validation_stats = {
+            "by_language": validation_stats_by_language,
+            "aligned_groups": validation_group_stats,
+        }
+        multilingual_group_stats = {
+            "language_names": language_names,
+            "train": train_group_stats,
+            "validation": validation_group_stats,
+        }
+    else:
+        train_rows = maybe_limit_rows(load_json_rows(args.train_dataset), args.limit_train)
+        validation_rows = maybe_limit_rows(load_json_rows(args.validation_dataset), args.limit_validation)
+        train_features, train_stats_obj = build_trace_scorer_features(
+            train_rows,
+            tokenizer=tokenizer,
+            max_length=args.max_length,
+            max_claim_chars=args.max_claim_chars,
+            max_evidence_items=args.max_evidence_items,
+            max_evidence_chars=args.max_evidence_chars,
+            max_trace_chars=args.max_trace_chars,
+            use_numeric_embedding=args.use_numeric_embedding,
+            max_numeric_chars=args.max_numeric_chars,
+            append_normalized_numbers=args.append_normalized_numbers,
+            max_normalized_numbers=args.max_normalized_numbers,
+        )
+        validation_features, validation_stats_obj = build_trace_scorer_features(
+            validation_rows,
+            tokenizer=tokenizer,
+            max_length=args.max_length,
+            max_claim_chars=args.max_claim_chars,
+            max_evidence_items=args.max_evidence_items,
+            max_evidence_chars=args.max_evidence_chars,
+            max_trace_chars=args.max_trace_chars,
+            use_numeric_embedding=args.use_numeric_embedding,
+            max_numeric_chars=args.max_numeric_chars,
+            append_normalized_numbers=args.append_normalized_numbers,
+            max_normalized_numbers=args.max_normalized_numbers,
+        )
+        train_stats = stats_as_dict(train_stats_obj)
+        validation_stats = stats_as_dict(validation_stats_obj)
 
     if not train_features:
         raise ValueError("No scorer training examples remained after preprocessing.")
     if not validation_features and args.eval_strategy != "no":
         raise ValueError("No scorer validation examples remained after preprocessing.")
+    if use_multilingual_training and not train_groups:
+        raise ValueError("No complete aligned multilingual training groups remained after preprocessing.")
+    if use_multilingual_training and args.eval_strategy != "no" and not validation_groups:
+        raise ValueError("No complete aligned multilingual validation groups remained after preprocessing.")
 
     resolved_dtype = resolve_dtype(args.dtype)
     target_modules = parse_target_modules(args.target_modules)
@@ -595,6 +1077,7 @@ def main() -> None:
     collator = TraceScorerDataCollator(
         pad_token_id=tokenizer.pad_token_id,
         label_dtype=torch.float32 if args.scorer_head == "bce" else torch.long,
+        include_metadata=use_multilingual_training,
     )
     training_args = build_training_arguments(TrainingArguments, args=args, output_dir=output_dir)
     callbacks = []
@@ -617,20 +1100,39 @@ def main() -> None:
                 early_stopping_threshold=args.early_stopping_threshold,
             )
         )
-    trainer = build_trainer(
-        Trainer,
-        model=model,
-        training_args=training_args,
-        train_dataset=TokenizedTraceScorerDataset(train_features),
-        eval_dataset=TokenizedTraceScorerDataset(validation_features) if validation_features else None,
-        data_collator=collator,
-        tokenizer=tokenizer,
-        callbacks=callbacks,
-        compute_metrics_fn=build_trace_and_task2_metrics(
+    trainer_cls = Trainer
+    train_dataset = TokenizedTraceScorerDataset(train_features)
+    eval_dataset = TokenizedTraceScorerDataset(validation_features) if validation_features else None
+    compute_metrics_fn = build_trace_and_task2_metrics(
+        eval_features=validation_features,
+        eval_k=args.eval_k,
+        verdict_top_k=args.verdict_top_k,
+    )
+    if use_multilingual_training:
+        trainer_cls = LanguageInvariantTraceScorerTrainer(
+            Trainer,
+            language_invariance_weight=args.language_invariance_weight,
+            language_invariance_warmup_ratio=args.language_invariance_warmup_ratio,
+        ).cls
+        train_dataset = GroupedTraceScorerDataset(train_groups or [])
+        eval_dataset = GroupedTraceScorerDataset(validation_groups or []) if validation_groups else None
+        compute_metrics_fn = build_multilingual_trace_and_task2_metrics(
             eval_features=validation_features,
             eval_k=args.eval_k,
             verdict_top_k=args.verdict_top_k,
-        ),
+            language_names=language_names,
+        )
+
+    trainer = build_trainer(
+        trainer_cls,
+        model=model,
+        training_args=training_args,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        data_collator=collator,
+        tokenizer=tokenizer,
+        callbacks=callbacks,
+        compute_metrics_fn=compute_metrics_fn,
     )
 
     resume_from_checkpoint = None
@@ -673,6 +1175,9 @@ def main() -> None:
         "model_id": args.model_id,
         "train_dataset": str(args.train_dataset),
         "validation_dataset": str(args.validation_dataset),
+        "train_datasets": {language: str(path) for language, path in train_dataset_paths.items()},
+        "validation_datasets": {language: str(path) for language, path in validation_dataset_paths.items()},
+        "multilingual_group_stats": multilingual_group_stats,
         "load_in_4bit": args.load_in_4bit,
         "use_numeric_embedding": args.use_numeric_embedding,
         "training_args": {
@@ -712,15 +1217,11 @@ def main() -> None:
             "metric_for_best_model": args.metric_for_best_model,
             "greater_is_better": args.greater_is_better,
             "ddp_find_unused_parameters": args.ddp_find_unused_parameters,
+            "language_invariance_weight": args.language_invariance_weight,
+            "language_invariance_warmup_ratio": args.language_invariance_warmup_ratio,
         },
-        "train_preprocess": {
-            **stats_as_dict(train_stats),
-            "average_sequence_length": average_sequence_length(train_stats),
-        },
-        "validation_preprocess": {
-            **stats_as_dict(validation_stats),
-            "average_sequence_length": average_sequence_length(validation_stats),
-        },
+        "train_preprocess": preprocess_stats_payload(train_stats),
+        "validation_preprocess": preprocess_stats_payload(validation_stats),
         "numeric_embedding_config": None if numeric_embedding_config is None else {
             "enabled": numeric_embedding_config.enabled,
             "num_token": numeric_embedding_config.num_token,

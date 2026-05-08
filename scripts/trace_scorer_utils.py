@@ -69,20 +69,50 @@ class TokenizedTraceScorerDataset(Dataset):
         return self.features[idx]
 
 
+class GroupedTraceScorerDataset(Dataset):
+    def __init__(self, groups: Sequence[Sequence[Dict[str, object]]]) -> None:
+        self.groups = [list(group) for group in groups]
+
+    def __len__(self) -> int:
+        return len(self.groups)
+
+    def __getitem__(self, idx: int) -> Dict[str, object]:
+        return {"examples": self.groups[idx]}
+
+
 class TraceScorerDataCollator:
-    def __init__(self, pad_token_id: int, label_dtype: torch.dtype = torch.long) -> None:
+    def __init__(
+        self,
+        pad_token_id: int,
+        label_dtype: torch.dtype = torch.long,
+        include_metadata: bool = False,
+    ) -> None:
         self.pad_token_id = pad_token_id
         self.label_dtype = label_dtype
         self.label_is_float = label_dtype in {torch.float16, torch.float32, torch.float64, torch.bfloat16}
+        self.include_metadata = include_metadata
 
     def __call__(self, features: Sequence[Dict[str, object]]) -> Dict[str, torch.Tensor]:
+        if features and "examples" in features[0]:
+            features = [example for group in features for example in group["examples"]]
+
         max_length = max(len(feature["input_ids"]) for feature in features)
         input_ids = []
         attention_mask = []
         labels = []
+        dataset_indices = []
+        trace_indices = []
+        language_ids = []
+        num_traces = []
         numeric_mask = []
         numeric_char_ids = []
         has_labels = "labels" in features[0]
+        has_metadata = (
+            self.include_metadata
+            and "dataset_index" in features[0]
+            and "trace_index" in features[0]
+            and "language_id" in features[0]
+        )
         has_numeric = "numeric_mask" in features[0] and "numeric_char_ids" in features[0]
         max_numeric_chars = (
             len(features[0]["numeric_char_ids"][0])
@@ -96,6 +126,11 @@ class TraceScorerDataCollator:
             attention_mask.append(feature["attention_mask"] + [0] * pad_len)
             if has_labels:
                 labels.append(float(feature["labels"]) if self.label_is_float else int(feature["labels"]))
+            if has_metadata:
+                dataset_indices.append(int(feature["dataset_index"]))
+                trace_indices.append(int(feature["trace_index"]))
+                language_ids.append(int(feature["language_id"]))
+                num_traces.append(int(feature.get("num_traces", 0)))
             if has_numeric:
                 numeric_mask.append(feature["numeric_mask"] + [0] * pad_len)
                 numeric_char_ids.append(
@@ -111,6 +146,11 @@ class TraceScorerDataCollator:
             if self.label_is_float:
                 label_tensor = label_tensor.unsqueeze(-1)
             batch["labels"] = label_tensor
+        if has_metadata:
+            batch["dataset_index"] = torch.tensor(dataset_indices, dtype=torch.long)
+            batch["trace_index"] = torch.tensor(trace_indices, dtype=torch.long)
+            batch["language_id"] = torch.tensor(language_ids, dtype=torch.long)
+            batch["num_traces"] = torch.tensor(num_traces, dtype=torch.long)
         if has_numeric:
             batch["numeric_mask"] = torch.tensor(numeric_mask, dtype=torch.bool)
             batch["numeric_char_ids"] = torch.tensor(numeric_char_ids, dtype=torch.long)

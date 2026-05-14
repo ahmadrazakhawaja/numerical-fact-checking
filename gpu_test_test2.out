@@ -1,0 +1,132 @@
+================================================================================
+JobID = 13599501
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu140
+================================================================================
+Node: ggpu140
+Starting at: Wed Apr 29 16:03:33 CEST 2026
+{
+  "saved_predictions": "results/multi_trace_scorer_qlora_english_validation_predictions_top5.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_English_multilingual_top5.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_es2_lr1e4_wandb/checkpoint-14007",
+  "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+  "dataset_path": "dataset/english/validation.json",
+  "language_name": "english",
+  "variant_name": "checkpoint-14007",
+  "num_predictions": 1600,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 2,
+  "max_evidence_chars": 512,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+{
+  "num_claims": 1600,
+  "k": 5,
+  "recall_at_k": 0.31573422064046697,
+  "precision_at_k": 0.5535000000000002,
+  "recall_at_k_upper_bound": 0.3911836687617944,
+  "mrr_at_k": 0.599635416666667,
+  "macro_f1": 0.5017436822466267,
+  "macro_f1_recall_at_k_mean": 0.4087389514435468,
+  "classwise_f1": {
+    "conflicting": 0.39999999999999997,
+    "false": 0.6844660194174758,
+    "true": 0.42076502732240434
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}
+{
+  "saved_predictions": "results/multi_trace_scorer_qlora_spanish_validation_predictions_top5.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_Spanish_multilingual_top5.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_es2_lr1e4_wandb/checkpoint-14007",
+  "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+  "dataset_path": "dataset/spanish/validation.json",
+  "language_name": "spanish",
+  "variant_name": "checkpoint-14007",
+  "num_predictions": 562,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 2,
+  "max_evidence_chars": 512,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+{
+  "num_claims": 562,
+  "k": 5,
+  "recall_at_k": 0.28221971400806645,
+  "precision_at_k": 0.7156583629893241,
+  "recall_at_k_upper_bound": 0.3211732446425407,
+  "mrr_at_k": 0.7481316725978647,
+  "macro_f1": 0.4007892948617427,
+  "macro_f1_recall_at_k_mean": 0.34150450443490454,
+  "classwise_f1": {
+    "conflicting": 0.19047619047619044,
+    "false": 0.8452250274423709,
+    "true": 0.16666666666666666
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}
+{
+  "saved_predictions": "results/multi_trace_scorer_qlora_arabic_validation_predictions_top5.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_Arabic_multilingual_top5.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_es2_lr1e4_wandb/checkpoint-14007",
+  "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+  "dataset_path": "dataset/arabic/validation.json",
+  "language_name": "arabic",
+  "variant_name": "checkpoint-14007",
+  "num_predictions": 652,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 2,
+  "max_evidence_chars": 512,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+{
+  "num_claims": 652,
+  "k": 5,
+  "recall_at_k": 0.2726469115808776,
+  "precision_at_k": 0.7665644171779139,
+  "recall_at_k_upper_bound": 0.2800633629854627,
+  "mrr_at_k": 0.8006134969325154,
+  "macro_f1": 0.781625441696113,
+  "macro_f1_recall_at_k_mean": 0.5271361766384953,
+  "classwise_f1": {
+    "false": 0.8,
+    "true": 0.7632508833922261
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}
+Finished at: Wed Apr 29 17:03:25 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-04-29T14:35:03
+Started: 2026-04-29T16:03:28
+Ended: 2026-04-29T17:03:25
+Elapsed: 60 min, Limit: 1800 min, Difference: 1740 min
+CPUs: 32, Nodes: 1
+Estimated credit Consumption: 150.00 core-hours
+================================================================================

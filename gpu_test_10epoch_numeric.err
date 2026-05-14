@@ -1,0 +1,62 @@
+Audited 79 packages in 34ms
+Traceback (most recent call last):
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/scripts/train_trace_scorer.py", line 468, in <module>
+    main()
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/scripts/train_trace_scorer.py", line 244, in main
+    torch.cuda.set_device(local_rank)
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/lib64/python3.11/site-packages/torch/cuda/__init__.py", line 584, in set_device
+    torch._C._cuda_setDevice(device)
+torch.AcceleratorError: CUDA error: invalid device ordinal
+GPU device may be out of range, do you have enough GPUs?
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+W0422 22:03:14.989000 3911557 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 3911569 closing signal SIGTERM
+W0422 22:03:14.990000 3911557 torch/distributed/elastic/multiprocessing/api.py:1010] Sending process 3911570 closing signal SIGTERM
+E0422 22:03:15.304000 3911557 torch/distributed/elastic/multiprocessing/api.py:984] failed (exitcode: 1) local_rank: 2 (pid: 3911571) of binary: /mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/bin/python3
+Traceback (most recent call last):
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/bin/torchrun", line 10, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/lib64/python3.11/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 362, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/lib64/python3.11/site-packages/torch/distributed/run.py", line 991, in main
+    run(args)
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/lib64/python3.11/site-packages/torch/distributed/run.py", line 982, in run
+    elastic_launch(
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/lib64/python3.11/site-packages/torch/distributed/launcher/api.py", line 170, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mnt/vast-standard/home/ahmad.khawaja/u26587/numerical-fact-checking/.venv/lib64/python3.11/site-packages/torch/distributed/launcher/api.py", line 317, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+scripts/train_trace_scorer.py FAILED
+------------------------------------------------------------
+Failures:
+[1]:
+  time      : 2026-04-22_22:03:15
+  host      : ggpu196.usr.hpc.gwdg.de
+  rank      : 0 (local_rank: 0)
+  exitcode  : -15 (pid: 3911569)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 3911569
+[2]:
+  time      : 2026-04-22_22:03:15
+  host      : ggpu196.usr.hpc.gwdg.de
+  rank      : 1 (local_rank: 1)
+  exitcode  : -15 (pid: 3911570)
+  error_file: <N/A>
+  traceback : Signal 15 (SIGTERM) received by PID 3911570
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-04-22_22:03:14
+  host      : ggpu196.usr.hpc.gwdg.de
+  rank      : 2 (local_rank: 2)
+  exitcode  : 1 (pid: 3911571)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================

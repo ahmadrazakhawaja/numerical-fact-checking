@@ -1,0 +1,7 @@
+Audited 79 packages in 30ms
+The token has not been saved to the git credentials helper. Pass `add_to_git_credential=True` in this function directly or `--add-to-git-credential` if using via `hf`CLI if you want to set the git credential as well.
+Token is valid (permission: read).
+The token `hugging face` has been saved to /scratch-scc/projects/ag_gipp/u26587/hf/stored_tokens
+Your token has been saved to /scratch-scc/projects/ag_gipp/u26587/hf/token
+Login successful.
+Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.

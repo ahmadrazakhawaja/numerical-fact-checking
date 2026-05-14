@@ -1,0 +1,57 @@
+================================================================================
+JobID = 13801459
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu199
+================================================================================
+Node: ggpu199
+Starting at: Thu May 14 14:18:42 CEST 2026
+{'ranking_loss': '2.509', 'language_invariance_loss': '1.14', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.6498', 'language_invariance_loss': '1.339', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '7.634', 'language_invariance_loss': '1.399', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '6.207e-05', 'language_invariance_loss': '1.417', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '25.02', 'language_invariance_loss': '0.5355', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '2.048', 'language_invariance_loss': '2.027', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '17.99', 'language_invariance_loss': '2.022', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '2.425', 'language_invariance_loss': '1.515', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.4104', 'language_invariance_loss': '2.138', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '2.409', 'language_invariance_loss': '0.9903', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.8592', 'language_invariance_loss': '0.6667', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.2971', 'language_invariance_loss': '1.425', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.1213', 'language_invariance_loss': '1.797', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.3006', 'language_invariance_loss': '2.051', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.1983', 'language_invariance_loss': '1.851', 'lambda_inv': '0.1', 'epoch': 0}
+{'ranking_loss': '0.3252', 'language_invariance_loss': '0.9149', 'lambda_inv': '0.1', 'epoch': 0}
+{'loss': '105.1', 'grad_norm': '63.88', 'learning_rate': '6.383e-06', 'epoch': '0.02843'}
+{'ranking_loss': '3.443', 'language_invariance_loss': '1.686', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '4.629', 'language_invariance_loss': '1.633', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '0.04798', 'language_invariance_loss': '1.803', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '8.514', 'language_invariance_loss': '1.019', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '7.55', 'language_invariance_loss': '1.186', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '3.375', 'language_invariance_loss': '0.8125', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '3.312', 'language_invariance_loss': '1.866', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '6.553', 'language_invariance_loss': '2.265', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '5.203', 'language_invariance_loss': '1.157', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '0.6834', 'language_invariance_loss': '0.8762', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '1.396', 'language_invariance_loss': '1.713', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '3.235', 'language_invariance_loss': '1.918', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '1.075', 'language_invariance_loss': '2.066', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '1.065', 'language_invariance_loss': '1.261', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '1.583', 'language_invariance_loss': '1.795', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'ranking_loss': '3.249', 'language_invariance_loss': '1.288', 'lambda_inv': '0.1', 'epoch': '0.02843'}
+{'loss': '64.92', 'grad_norm': '76.75', 'learning_rate': '1.348e-05', 'epoch': '0.05687'}
+{'ranking_loss': '2.989', 'language_invariance_loss': '1.563', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '1.428', 'language_invariance_loss': '1.79', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '1.313', 'language_invariance_loss': '1.129', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '1.346', 'language_invariance_loss': '2.528', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '0.8122', 'language_invariance_loss': '1.191', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '4.551', 'language_invariance_loss': '1.392', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '1.747', 'language_invariance_loss': '2.356', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '4.348', 'language_invariance_loss': '1.189', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '1.459', 'language_invariance_loss': '1.809', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '1.511', 'language_invariance_loss': '1.702', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '5.333', 'language_invariance_loss': '1.879', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '2.565', 'language_invariance_loss': '1.487', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '2.121', 'language_invariance_loss': '2.057', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '0.633', 'language_invariance_loss': '1.478', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '6.008', 'language_invariance_loss': '0.4017', 'lambda_inv': '0.1', 'epoch': '0.05687'}
+{'ranking_loss': '4.088', 'language_invariance_loss': '2.123', 'lambda_inv': '0.1', 'epoch': '0.05687'}

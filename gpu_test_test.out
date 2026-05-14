@@ -1,0 +1,16 @@
+================================================================================
+JobID = 13618128
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu144
+================================================================================
+Node: ggpu144
+Starting at: Thu Apr 30 19:00:46 CEST 2026
+{'loss': '45.95', 'grad_norm': '54.21', 'learning_rate': '1.712e-06', 'epoch': '0.02856'}
+============ Job Information ===================================================
+Submitted: 2026-04-30T16:05:39
+Started: 2026-04-30T19:00:42
+Ended: 2026-04-30T20:15:34
+Elapsed: 75 min, Limit: 2880 min, Difference: 2805 min
+CPUs: 64, Nodes: 1
+Estimated credit Consumption: 375.00 core-hours
+================================================================================

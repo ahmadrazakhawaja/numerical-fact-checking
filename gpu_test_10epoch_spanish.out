@@ -1,0 +1,51 @@
+================================================================================
+JobID = 13523274
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu196
+================================================================================
+Node: ggpu196
+Starting at: Thu Apr 23 22:08:29 CEST 2026
+{
+  "saved_predictions": "results/multi_trace_scorer_qlora_10epoch_spanish_validation_predictions_top5.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_Spanish_multilingual_top5.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_10epoch_es2_lr1e4_wandb/final_adapter",
+  "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+  "dataset_path": "dataset/spanish/validation.json",
+  "language_name": "spanish",
+  "variant_name": "final_adapter",
+  "num_predictions": 562,
+  "start_index": 0,
+  "limit": null,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+{
+  "num_claims": 562,
+  "k": 5,
+  "recall_at_k": 0.2754384081161647,
+  "precision_at_k": 0.7142348754448401,
+  "recall_at_k_upper_bound": 0.3211732446425407,
+  "mrr_at_k": 0.7463523131672598,
+  "macro_f1": 0.39191417769653064,
+  "macro_f1_recall_at_k_mean": 0.3336762929063477,
+  "classwise_f1": {
+    "conflicting": 0.1702127659574468,
+    "false": 0.8462377317339149,
+    "true": 0.1592920353982301
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}
+Finished at: Thu Apr 23 22:14:53 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-04-23T22:07:42
+Started: 2026-04-23T22:08:24
+Ended: 2026-04-23T22:14:53
+Elapsed: 7 min, Limit: 1200 min, Difference: 1193 min
+CPUs: 32, Nodes: 1
+Estimated Consumption: 17.50 core-hours
+================================================================================

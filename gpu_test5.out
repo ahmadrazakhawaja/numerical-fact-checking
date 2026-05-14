@@ -1,0 +1,138 @@
+================================================================================
+JobID = 13667515
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu145
+================================================================================
+Node: ggpu145
+Starting at: Tue May  5 15:39:57 CEST 2026
+A new version of huggingface_hub (1.13.0) is available! You are using version 1.4.1.
+To update, run: pip install -U huggingface_hub
+
+{
+  "saved_predictions": "results/multi_trace_scorer_llama_qlora_task2metric_no_num_norm_english_validation_predictions_top5_2.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_English_multilingual_top5.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_task2metric_no_num_norm/final_adapter",
+  "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+  "scorer_head": "ce",
+  "dataset_path": "dataset/english/validation.json",
+  "language_name": "english",
+  "variant_name": "final_adapter",
+  "num_predictions": 1600,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 20,
+  "max_evidence_chars": 3078,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+{
+  "num_claims": 1600,
+  "k": 5,
+  "recall_at_k": 0.31949083381895504,
+  "precision_at_k": 0.5602500000000005,
+  "recall_at_k_upper_bound": 0.3911836687617944,
+  "mrr_at_k": 0.6038645833333337,
+  "macro_f1": 0.5172527140286027,
+  "macro_f1_recall_at_k_mean": 0.4183717739237789,
+  "classwise_f1": {
+    "conflicting": 0.4258823529411765,
+    "false": 0.6838868388683887,
+    "true": 0.4419889502762431
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}
+{
+  "saved_predictions": "results/multi_trace_scorer_llama_qlora_task2metric_no_num_norm_spanish_validation_predictions_top5_2.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_Spanish_multilingual_top5.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_task2metric_no_num_norm/final_adapter",
+  "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+  "scorer_head": "ce",
+  "dataset_path": "dataset/spanish/validation.json",
+  "language_name": "spanish",
+  "variant_name": "final_adapter",
+  "num_predictions": 562,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 20,
+  "max_evidence_chars": 3078,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+{
+  "num_claims": 562,
+  "k": 5,
+  "recall_at_k": 0.2715218916551643,
+  "precision_at_k": 0.708540925266904,
+  "recall_at_k_upper_bound": 0.3211732446425407,
+  "mrr_at_k": 0.7395314353499406,
+  "macro_f1": 0.3968624296057925,
+  "macro_f1_recall_at_k_mean": 0.3341921606304784,
+  "classwise_f1": {
+    "conflicting": 0.18181818181818182,
+    "false": 0.845132743362832,
+    "true": 0.16363636363636364
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}
+{
+  "saved_predictions": "results/multi_trace_scorer_llama_qlora_task2metric_no_num_norm_arabic_validation_predictions_top5_2.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_Arabic_multilingual_top5.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_task2metric_no_num_norm/final_adapter",
+  "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+  "scorer_head": "ce",
+  "dataset_path": "dataset/arabic/validation.json",
+  "language_name": "arabic",
+  "variant_name": "final_adapter",
+  "num_predictions": 652,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 20,
+  "max_evidence_chars": 3078,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+{
+  "num_claims": 652,
+  "k": 5,
+  "recall_at_k": 0.27940748633063545,
+  "precision_at_k": 0.7723926380368097,
+  "recall_at_k_upper_bound": 0.2800633629854627,
+  "mrr_at_k": 0.8086656441717791,
+  "macro_f1": 0.7976901724681476,
+  "macro_f1_recall_at_k_mean": 0.5385488293993915,
+  "classwise_f1": {
+    "false": 0.8138528138528138,
+    "true": 0.7815275310834814
+  },
+  "missing_predictions": 0,
+  "invalid_rank_indices": 0
+}
+Finished at: Tue May  5 16:54:55 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-05-05T15:33:48
+Started: 2026-05-05T15:39:33
+Ended: 2026-05-05T16:54:56
+Elapsed: 76 min, Limit: 600 min, Difference: 524 min
+CPUs: 32, Nodes: 1
+Estimated credit Consumption: 190.00 core-hours
+================================================================================

@@ -1,0 +1,39 @@
+================================================================================
+JobID = 13685363
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu156
+================================================================================
+Node: ggpu156
+Starting at: Thu May  7 02:22:35 CEST 2026
+{
+  "saved_predictions": "results/multi_trace_scorer_llama_qlora_spanish_test_predictions_top5.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_Spanish_multilingual_top5_test.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_llama_qlora_es2_lr1e4_wandb/final_adapter",
+  "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+  "scorer_head": "ce",
+  "dataset_path": "dataset/spanish/clef_spanish_test_final.json",
+  "language_name": "spanish",
+  "variant_name": "final_adapter",
+  "num_predictions": 1164,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 20,
+  "max_evidence_chars": 3078,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+Finished at: Thu May  7 04:38:49 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-05-07T02:21:23
+Started: 2026-05-07T02:22:11
+Ended: 2026-05-07T04:38:49
+Elapsed: 137 min, Limit: 2880 min, Difference: 2743 min
+CPUs: 32, Nodes: 1
+Estimated credit Consumption: 342.50 core-hours
+================================================================================

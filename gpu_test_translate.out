@@ -1,0 +1,124 @@
+================================================================================
+JobID = 13729377
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu144
+================================================================================
+Node: ggpu144
+Starting at: Sat May  9 10:59:01 CEST 2026
+
+Language: arabic (src=ar -> dest=es)
+Processing dataset/arabic/train.json -> dataset/arabic/train_spanish_translated.json
+  translated 25/2608 rows from train.json
+  translated 50/2608 rows from train.json
+  translated 75/2608 rows from train.json
+  translated 100/2608 rows from train.json
+  translated 125/2608 rows from train.json
+  translated 150/2608 rows from train.json
+  translated 175/2608 rows from train.json
+  translated 200/2608 rows from train.json
+  translated 225/2608 rows from train.json
+  translated 250/2608 rows from train.json
+  translated 275/2608 rows from train.json
+  translated 300/2608 rows from train.json
+  translated 325/2608 rows from train.json
+  translated 350/2608 rows from train.json
+  translated 375/2608 rows from train.json
+  translated 400/2608 rows from train.json
+  translated 425/2608 rows from train.json
+  translated 450/2608 rows from train.json
+  translated 475/2608 rows from train.json
+  translated 500/2608 rows from train.json
+  translated 525/2608 rows from train.json
+  translated 550/2608 rows from train.json
+  translated 575/2608 rows from train.json
+  translated 600/2608 rows from train.json
+  translated 625/2608 rows from train.json
+  translated 650/2608 rows from train.json
+  translated 675/2608 rows from train.json
+  translated 700/2608 rows from train.json
+  translated 725/2608 rows from train.json
+  translated 750/2608 rows from train.json
+  translated 775/2608 rows from train.json
+  translated 800/2608 rows from train.json
+  translated 825/2608 rows from train.json
+  translated 850/2608 rows from train.json
+  translated 875/2608 rows from train.json
+  translated 900/2608 rows from train.json
+  translated 925/2608 rows from train.json
+  translated 950/2608 rows from train.json
+  translated 975/2608 rows from train.json
+  translated 1000/2608 rows from train.json
+  translated 1025/2608 rows from train.json
+  translated 1050/2608 rows from train.json
+  translated 1075/2608 rows from train.json
+  translated 1100/2608 rows from train.json
+  translated 1125/2608 rows from train.json
+  translated 1150/2608 rows from train.json
+  translated 1175/2608 rows from train.json
+  translated 1200/2608 rows from train.json
+  translated 1225/2608 rows from train.json
+  translated 1250/2608 rows from train.json
+  translated 1275/2608 rows from train.json
+  translated 1300/2608 rows from train.json
+  translated 1325/2608 rows from train.json
+  translated 1350/2608 rows from train.json
+  translated 1375/2608 rows from train.json
+  translated 1400/2608 rows from train.json
+  translated 1425/2608 rows from train.json
+  translated 1450/2608 rows from train.json
+  translated 1475/2608 rows from train.json
+  translated 1500/2608 rows from train.json
+  translated 1525/2608 rows from train.json
+  translated 1550/2608 rows from train.json
+  translated 1575/2608 rows from train.json
+  translated 1600/2608 rows from train.json
+  translated 1625/2608 rows from train.json
+  translated 1650/2608 rows from train.json
+  translated 1675/2608 rows from train.json
+  translated 1700/2608 rows from train.json
+  translated 1725/2608 rows from train.json
+  translated 1750/2608 rows from train.json
+  translated 1775/2608 rows from train.json
+  translated 1800/2608 rows from train.json
+  translated 1825/2608 rows from train.json
+  translated 1850/2608 rows from train.json
+  translated 1875/2608 rows from train.json
+  translated 1900/2608 rows from train.json
+  translated 1925/2608 rows from train.json
+  translated 1950/2608 rows from train.json
+  translated 1975/2608 rows from train.json
+  translated 2000/2608 rows from train.json
+  translated 2025/2608 rows from train.json
+  translated 2050/2608 rows from train.json
+  translated 2075/2608 rows from train.json
+  translated 2100/2608 rows from train.json
+  translated 2125/2608 rows from train.json
+  translated 2150/2608 rows from train.json
+  translated 2175/2608 rows from train.json
+  translated 2200/2608 rows from train.json
+  translated 2225/2608 rows from train.json
+  translated 2250/2608 rows from train.json
+  translated 2275/2608 rows from train.json
+  translated 2300/2608 rows from train.json
+  translated 2325/2608 rows from train.json
+  translated 2350/2608 rows from train.json
+  translated 2375/2608 rows from train.json
+  translated 2400/2608 rows from train.json
+  translated 2425/2608 rows from train.json
+  translated 2450/2608 rows from train.json
+  translated 2475/2608 rows from train.json
+  translated 2500/2608 rows from train.json
+  translated 2525/2608 rows from train.json
+  translated 2550/2608 rows from train.json
+  translated 2575/2608 rows from train.json
+  translated 2600/2608 rows from train.json
+Saved: dataset/arabic/train_spanish_translated.json
+Finished at: Sat May  9 12:46:18 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-05-09T10:58:16
+Started: 2026-05-09T10:58:38
+Ended: 2026-05-09T12:46:18
+Elapsed: 108 min, Limit: 2880 min, Difference: 2772 min
+CPUs: 32, Nodes: 1
+Estimated credit Consumption: 270.00 core-hours
+================================================================================

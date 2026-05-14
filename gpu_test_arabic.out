@@ -1,0 +1,42 @@
+================================================================================
+JobID = 13711979
+User = u26587, Account = ag_gipp
+Partition = scc-gpu, Nodelist = ggpu147
+================================================================================
+Node: ggpu147
+Starting at: Fri May  8 14:23:43 CEST 2026
+A new version of huggingface_hub (1.14.0) is available! You are using version 1.4.1.
+To update, run: pip install -U huggingface_hub
+
+{
+  "saved_predictions": "results/multi_trace_scorer_llama_qlora_task2metric_no_num_norm_arabic_test_predictions_top5.json",
+  "output_format": "submission",
+  "internal_output": null,
+  "supervisor_output": "results/Task2_Numerical_claims_Arabic_multilingual_top5_test2.json",
+  "adapter_path": "/scratch-scc/projects/ag_gipp/u26587/checkpoints/multi_trace_scorer_qlora_task2metric_no_num_norm/final_adapter",
+  "model_id": "meta-llama/Llama-3.1-8B-Instruct",
+  "scorer_head": "ce",
+  "dataset_path": "dataset/arabic/clef_2026_final_arabic_test.json",
+  "language_name": "arabic",
+  "variant_name": "final_adapter",
+  "num_predictions": 511,
+  "start_index": 0,
+  "limit": null,
+  "max_evidence_items": 20,
+  "max_evidence_chars": 3078,
+  "append_normalized_numbers": false,
+  "max_normalized_numbers": 20,
+  "load_in_4bit": true,
+  "use_numeric_embedding": false,
+  "verdict_top_k": 5,
+  "scoring_batch_size": 8
+}
+Finished at: Fri May  8 14:33:29 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-05-08T14:19:12
+Started: 2026-05-08T14:23:20
+Ended: 2026-05-08T14:33:29
+Elapsed: 11 min, Limit: 1200 min, Difference: 1189 min
+CPUs: 32, Nodes: 1
+Estimated credit Consumption: 27.50 core-hours
+================================================================================

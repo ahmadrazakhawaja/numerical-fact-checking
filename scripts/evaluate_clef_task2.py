@@ -31,14 +31,22 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 try:
-    from task2_utils import infer_language_name, load_dataset_rows, load_json_rows, normalize_label, safe_div
+    from task2_utils import get_gold_label, infer_language_name, load_dataset_rows, load_json_rows, normalize_label, safe_div
 except ImportError:  # pragma: no cover - import path fallback
-    from scripts.task2_utils import infer_language_name, load_dataset_rows, load_json_rows, normalize_label, safe_div
+    from scripts.task2_utils import (
+        get_gold_label,
+        infer_language_name,
+        load_dataset_rows,
+        load_json_rows,
+        normalize_label,
+        safe_div,
+    )
 
 
 DEFAULT_LANGS = ("english", "spanish", "arabic")
@@ -63,7 +71,7 @@ class PredictionRecord:
 
 def build_claim_record(language: str, dataset_index: int, row: dict) -> ClaimRecord:
     verdict_list = [normalize_label(v) for v in row.get("Verdict_list", [])]
-    gold_verdict = normalize_label(row.get("label", ""))
+    gold_verdict = get_gold_label(row)
     num_traces = len(row.get("Reasoning_traces", []))
     return ClaimRecord(
         language=language,
@@ -246,11 +254,20 @@ def evaluate(
     ranking_mrr = []
     y_true: List[str] = []
     y_pred: List[str] = []
+    gold_label_counts: Counter[str] = Counter()
+    verdict_label_counts: Counter[str] = Counter()
 
     missing_predictions = 0
     invalid_rank_indices = 0
+    empty_gold_labels = 0
+    claims_without_relevant_traces = 0
 
     for key, claim in claims.items():
+        gold_label_counts[claim.gold_verdict] += 1
+        verdict_label_counts.update(v for v in claim.verdict_list if v)
+        if not claim.gold_verdict:
+            empty_gold_labels += 1
+
         pred = preds.get(key)
         if pred is None:
             missing_predictions += 1
@@ -276,6 +293,8 @@ def evaluate(
                 filtered.append(idx)
 
         relevant = {i for i, v in enumerate(claim.verdict_list) if v == claim.gold_verdict}
+        if not relevant:
+            claims_without_relevant_traces += 1
         ranking_recall.append(recall_at_k(filtered, relevant, k=k))
         ranking_precision.append(precision_at_k(filtered, relevant, k=k))
         ranking_recall_upper_bound.append(recall_at_k_upper_bound(relevant, k=k))
@@ -283,6 +302,19 @@ def evaluate(
 
         y_true.append(claim.gold_verdict)
         y_pred.append(pred_verdict)
+
+    if claims and empty_gold_labels == len(claims):
+        raise ValueError(
+            "All gold labels are empty. The evaluator expects the claim-level gold label in a supported "
+            "gold-label field such as 'label' or 'Label'. Check the dataset file passed via --dataset-path, or do not pass --evaluate for "
+            "unlabeled test files."
+        )
+    if claims and claims_without_relevant_traces == len(claims):
+        raise ValueError(
+            "No relevant traces were found for any claim. This usually means the claim-level 'label' values "
+            "are missing or do not use the same label strings as Verdict_list. "
+            f"Gold labels: {dict(gold_label_counts)}; trace verdict labels: {dict(verdict_label_counts)}"
+        )
 
     labels = sorted(set(y_true))
     macro_f1, classwise_f1 = f1_scores(y_true, y_pred, labels)
@@ -300,6 +332,10 @@ def evaluate(
         "classwise_f1": classwise_f1,
         "missing_predictions": missing_predictions,
         "invalid_rank_indices": invalid_rank_indices,
+        "empty_gold_labels": empty_gold_labels,
+        "claims_without_relevant_traces": claims_without_relevant_traces,
+        "gold_label_counts": dict(gold_label_counts),
+        "trace_verdict_label_counts": dict(verdict_label_counts),
     }
 
 

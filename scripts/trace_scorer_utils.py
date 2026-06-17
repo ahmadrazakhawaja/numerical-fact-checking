@@ -18,7 +18,7 @@ try:
         canonicalize_numeric_surface,
     )
     from task2_ranking_utils import render_list_block, truncate_text
-    from task2_utils import normalize_label
+    from task2_utils import get_gold_label, normalize_label
 except ImportError:  # pragma: no cover - import path fallback
     from scripts.numeric_embedding_utils import (
         NUMERIC_PATTERN,
@@ -27,7 +27,7 @@ except ImportError:  # pragma: no cover - import path fallback
         canonicalize_numeric_surface,
     )
     from scripts.task2_ranking_utils import render_list_block, truncate_text
-    from scripts.task2_utils import normalize_label
+    from scripts.task2_utils import get_gold_label, normalize_label
 
 
 TRACE_LABEL_PATTERN = re.compile(
@@ -288,7 +288,8 @@ def build_trace_scorer_input_artifacts(
         claim=maybe_annotate(claim),
         body="\n".join(body_parts),
     )
-    label = int(normalize_label(verdict) == normalize_label(row.get("label", "")))
+    gold_label = get_gold_label(row)
+    label = int(normalize_label(verdict) == gold_label)
     return {
         "text": text,
         "label": label,
@@ -389,7 +390,7 @@ def build_trace_scorer_features(
             encoded["trace_index"] = trace_index
             encoded["dataset_index"] = dataset_index
             encoded["trace_verdict"] = artifacts["trace_verdict"]
-            encoded["gold_label"] = row.get("label", "")
+            encoded["gold_label"] = get_gold_label(row)
             encoded["verdict_list"] = [str(verdict) for verdict in (row.get("Verdict_list", []) or [])]
             encoded["num_traces"] = len(traces)
             features.append(encoded)

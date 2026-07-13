@@ -282,13 +282,14 @@ def translate_file(
         if progress_every > 0 and idx % progress_every == 0:
             print(f"  translated {idx}/{len(rows)} rows from {input_path.name}")
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(translated_rows, f, indent=2, ensure_ascii=False)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Translate Arabic/Spanish CLEF dataset files to English using googletrans."
+        description="Translate CLEF dataset files using googletrans."
     )
     parser.add_argument(
         "--dataset-dir",
@@ -314,6 +315,27 @@ def main() -> None:
         type=str,
         default="en",
         help="Destination language code for googletrans.",
+    )
+    parser.add_argument(
+        "--input-path",
+        type=Path,
+        help=(
+            "Translate one custom input JSON file. Must be used together with "
+            "--output-path; bypasses --languages and --splits."
+        ),
+    )
+    parser.add_argument(
+        "--output-path",
+        type=Path,
+        help="Output JSON path for --input-path.",
+    )
+    parser.add_argument(
+        "--source-language",
+        type=str,
+        help=(
+            "Source language code for --input-path, for example en, es, or ar. "
+            "If omitted, it is inferred from --languages."
+        ),
     )
     parser.add_argument(
         "--output-suffix",
@@ -355,6 +377,48 @@ def main() -> None:
         help="Print progress every N rows (0 disables progress logs).",
     )
     args = parser.parse_args()
+
+    if (args.input_path is None) != (args.output_path is None):
+        parser.error("--input-path and --output-path must be provided together")
+
+    if args.input_path is not None:
+        source_lang = args.source_language
+        if source_lang is None:
+            if len(args.languages) != 1:
+                parser.error(
+                    "--source-language is required in custom-file mode unless "
+                    "exactly one --languages value is provided"
+                )
+            source_lang = LANGUAGE_TO_SOURCE_CODE.get(
+                args.languages[0].strip().lower(), "auto"
+            )
+
+        if not args.input_path.exists():
+            raise FileNotFoundError(f"Input file not found: {args.input_path}")
+
+        client = GoogleTransClient(
+            dest_lang=args.destination_language,
+            batch_size=args.batch_size,
+            max_retries=args.max_retries,
+            retry_wait_seconds=args.retry_wait_seconds,
+            max_chars_per_request=args.max_chars_per_request,
+        )
+        try:
+            print(
+                f"Processing {args.input_path} -> {args.output_path} "
+                f"(src={source_lang} -> dest={args.destination_language})"
+            )
+            translate_file(
+                input_path=args.input_path,
+                output_path=args.output_path,
+                client=client,
+                source_lang=source_lang,
+                progress_every=args.progress_every,
+            )
+            print(f"Saved: {args.output_path}")
+        finally:
+            client.close()
+        return
 
     languages = [lang.strip().lower() for lang in args.languages]
     splits = [split.strip().lower() for split in args.splits]

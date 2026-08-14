@@ -1,0 +1,126 @@
+%% The first command in your LaTeX source must be the \documentclass command.
+\documentclass[acmlarge,screen,nonacm]{acmart}
+
+% These packages might be useful:
+\usepackage{cleveref}   % use \citep{} for short references in paranthesis. Use \citet{} for in-text references.
+\usepackage{arydshln}
+\usepackage{float}
+\usepackage{pifont}
+\usepackage{wrapfig}
+\usepackage{multirow}
+\usepackage{tikz}
+\usepackage{soul}
+\usepackage{tcolorbox}
+\usepackage{geometry}
+\usepackage{svg}
+
+% Search paths so chapter files can reference figures by bare name.
+\graphicspath{{figures/}}
+\svgpath{{figures/}}
+% Keep the Inkscape conversion cache inside build/ instead of the source folder.
+\svgsetup{inkscapepath=build/svg-inkscape}
+\usepackage{amsmath}
+\usepackage{soul}
+\usepackage{makecell}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+
+\usepackage[utf8]{inputenc}
+
+\DeclareUnicodeCharacter{03BA}{\ensuremath{\kappa}} % κ
+\DeclareUnicodeCharacter{03C4}{\ensuremath{\tau}}   % τ
+\DeclareUnicodeCharacter{03BB}{\ensuremath{\lambda}} % λ
+\DeclareUnicodeCharacter{22C6}{\ensuremath{\star}}   % ⋆
+
+\makeatletter
+% If subfigures are used:
+\renewcommand\p@subfigure{\thefigure\,}
+\renewcommand\thesubfigure{(\alph{subfigure})}
+% If subtables are used:
+% \renewcommand\p@subtable{\thetable\,}
+% \renewcommand\thesubtable{\alph{subtable})}
+\DeclareCaptionLabelFormat{mysublabelfmt}{\alph{sub\@captype}}
+\makeatother
+
+\settopmatter{printacmref=false}
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
+\settopmatter{printacmref=false}
+
+\makeatletter
+\let\@authorsaddresses\@empty
+\makeatother
+
+
+% The actual document starts here:
+\begin{document}
+
+% The title page is the very first page
+% NOTE: Edit the information in the titlepage.tex
+\input{chapters/titlepage}
+
+%%
+%% The "title" command has an optional parameter,
+%% allowing the author to define a "short title" to be used in page headers.
+\title{Last in Translation? Evaluating Language-Invariant Reason Ranking in Numerical Fact-Checking}
+
+%%
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+\author{Ahmad Raza Khawaja}
+\email{ahmad.khawaja@stud.uni-goettingen.de}
+\affiliation{%
+  \institution{University of Göttingen}
+  \city{Göttingen}
+  \country{Germany}
+}
+% \orcid{XXXX-XXXX-XXXX-XXXX} % optional
+
+\renewcommand{\shortauthors}{Ahmad Raza Khawaja}
+
+%%
+%% The abstract is a short summary of the work to be presented in the
+%% article.
+% \begin{abstract}
+% \section*{Abstract}     % * excludes this section from the table of contents
+% Numerical claims are common in political discourse, news, and social media, yet their verification remains difficult even within a single language. In multilingual settings, this challenge is amplified: large language models often fail to treat semantically equivalent claims consistently, so a claim and its translation may receive different reasoning-trace rankings and, consequently, different verdicts. This thesis investigates whether optimizing explicitly for language-invariant reasoning yields genuine improvements in reasoning quality and ranking performance, or merely produces more stable surface behavior. We study this question using CLEF CheckThat! 2026 Task 2, which requires ranking candidate reasoning traces for claims in English, Spanish, and Arabic and deriving a final verdict from the highest-ranked traces. Building on our shared-task submission, a Llama-3.1-8B trace scorer fine-tuned with Quantized Low-Rank Adaptation (QLoRA) that ranked first in English and third in Spanish, we compare prompting-based ranking, Direct Preference Optimization with English-only and multilingual preference data, and supervised trace scoring. Across these approaches, we evaluate both task performance, using Recall@5, MRR@5, and macro-F1, and cross-lingual consistency, using agreement between model judgments over parallel claims. [Placeholder for results: Experiments on the parallel English, Spanish, and Arabic datasets are ongoing; upon completion, this section will report whether training for language invariance improves ranking performance and reasoning quality, how the effect varies across languages, and what it implies for the relationship between cross-lingual consistency and genuine numerical reasoning.]
+% \end{abstract}
+
+
+%%
+%% This command processes the author and title
+\maketitle
+\addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
+
+% \input{chapters/introduction}
+
+\input{chapters/related_work}
+
+\input{chapters/background}
+
+\input{chapters/methodology}
+
+\input{chapters/results}
+
+%% The next two lines define the bibliography style to be used and
+%% the bibliography file.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{mainbib}
+
+%%
+%% If your work has an appendix, this is the place to put it:
+\appendix
+
+\input{chapters/appendix}
+
+\end{document}

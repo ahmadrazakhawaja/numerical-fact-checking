@@ -1,0 +1,420 @@
+% ============================================================
+% Related Work  (extended version)
+% Spine: language invariance / cross-lingual consistency.
+% Uses plain \cite{} so it is compatible with any bibliography
+% backend (natbib, biblatex, or the default BibTeX). All keys
+% are defined in references.bib.
+% ============================================================
+
+\section{Related Work}
+\label{sec:related-work}
+
+This section reviews the work most relevant to the thesis: LLM-based ranking,
+multilingual fact-checking, cross-lingual consistency, numerical reasoning, and
+preference-based fine-tuning. The central question is whether language invariance
+can be useful not only as something to measure, but also as something to optimize
+for: if a model is encouraged to behave consistently across languages, does its
+ranking and reasoning become more reliable?
+
+This question connects directly to the three research questions of the thesis.
+RQ1 asks whether optimizing for language-invariant reasoning improves ranking
+performance. RQ2 examines how language invariance relates to reasoning quality
+across English, Spanish, and Arabic. RQ3 asks whether language-invariant training
+objectives lead to more robust multilingual reasoning models. The section first
+discusses LLMs as rankers and judges, including the presentation biases that
+affect them. It then reviews automated and multilingual fact-checking, before
+turning to cross-lingual consistency and the metrics used to measure it. Finally,
+it discusses multilingual representations, numerical reasoning across languages,
+and the preference-optimization and fine-tuning methods used in this thesis.
+
+\subsection{LLMs as Rankers and Rerankers}
+\label{subsec:ranking}
+
+LLMs are now often used as rankers even without task-specific training, especially
+in retrieval and evaluation settings. One common approach is pairwise ranking
+prompting: the model compares two candidates at a time, and the final ranking is
+built by aggregating these pairwise preferences. This makes each decision easier
+for the model, but it is expensive because the number of comparisons grows
+quadratically with the number of candidates~\cite{qin2024largelanguagemodelseffective}.
+
+Listwise ranking takes a different approach. Instead of comparing candidates in
+pairs, the model sees all candidates at once and is asked to produce a complete
+ordering. This is more efficient at inference time, but it also makes the output
+depend on the full prompt and on the order in which the candidates are shown.
+Recent work has adapted learning-to-rank objectives to preference optimization in
+order to train listwise rankers more directly~\cite{liu-etal-2025-lipo}. However, these
+generative ranking methods remain sensitive to presentation details such as
+candidate order and prompt format, rather than depending only on the content of
+the candidates~\cite{qiao2026llmbasedlistwisererankingeffect}.
+
+This limitation motivates the independently scored design used in this thesis.
+Instead of asking the model to generate a full ranking directly, each candidate
+reasoning trace is scored separately and the final ranking is derived from those
+scores. This design is especially relevant for the numerical fact-checking task
+studied here, where the ranking should reflect the quality of the reasoning trace
+rather than artifacts of the prompt.
+
+\subsection{Biases in LLM-as-a-Judge Evaluation}
+\label{subsec:judge-bias}
+
+Similar issues appear when LLMs are used as evaluators. Their judgments do not
+depend only on the quality of the content being assessed; they can also be shaped
+by how the options are presented. Studies of the LLM-as-a-judge setting show
+strong position bias, meaning that a candidate's location in the prompt can affect
+whether it is preferred. Other effects, such as verbosity bias, have also been
+observed~\cite{shi2025judgingjudgessystematicstudy}. These biases matter for ranking because they can
+change which candidate is selected, even when the underlying content has not
+changed.
+
+For this thesis, the most important issue is that LLM judges are often not
+language-invariant. In other words, the same model may give different judgments
+when the same evaluation is carried out in different languages. One recent study
+examined five model families, five tasks, and twenty-five languages, and found
+that multilingual judge agreement was low, with an average Fleiss' $\kappa$ of
+roughly $0.3$. The study also found that multilingual pre-training and larger
+model scale did not reliably remove this inconsistency~\cite{fu2025reliablemultilingualllmasajudge}.
+This kind of cross-lingual instability is exactly the problem that the research
+questions in this thesis address.
+
+\subsection{Automated and Multilingual Fact-Checking}
+\label{subsec:factcheck}
+
+Automated fact-checking is increasingly treated as a reasoning and assessment
+problem for LLMs. Rather than only asking whether a model can produce a label,
+recent work studies how the formulation of the task affects the reliability of
+model-based verification for real-world claims~\cite{sahitaj2025automatedfactcheckingrealworldclaims}.
+Numerical claims make this problem especially difficult. A small change in scope,
+units, dates, or quantitative interpretation can be enough to change the correct
+verdict.
+
+The QuanTemp benchmark was introduced to study numerical claim verification in a
+real-world, open-domain setting, with claims paired with supporting evidence
+\cite{v2024quantemprealworldopendomainbenchmark}. Later work builds on this by generating multiple reasoning
+traces for each claim and using a verifier to choose the traces that are most
+useful for reaching the correct verdict~\cite{chungkham2025thinkrightmoretesttime}. The
+CLEF~CheckThat!~2026 Task~2 shared task follows this verifier-guided setup for
+multilingual numerical claim verification. In this task, systems work with
+English, Spanish, and Arabic claims, rank candidate reasoning traces, and then
+derive a claim-level verdict~\cite{clef-checkthat:2026:task2}.
+
+There is also a broader line of work on multilingual fact verification. X-Fact
+collects naturally occurring claims across twenty-five languages from eleven
+language families, together with expert veracity labels. Results on this benchmark
+show that even strong models achieve only modest accuracy, highlighting how
+difficult it is to transfer fact-checking ability across languages
+\cite{gupta2021xfactnewbenchmarkdataset}. XFEVER extends the FEVER setting by translating claims and
+evidence into multiple languages, making it possible to study zero-shot and
+translate-train cross-lingual verification directly. It also finds that
+performance varies substantially by language and generally remains behind English
+\cite{chang2023xfeverexploringfactverification}. Complementing these verification benchmarks, X-FACTR
+probes factual knowledge in multilingual models using native-speaker-authored
+fill-in-the-blank queries in twenty-three languages, showing that factual recall
+also differs across languages~\cite{jiang2020xfactrmultilingualfactualknowledge}.
+
+Together, these studies show why multilingual fact-checking is both important and
+difficult. They also provide the practical motivation for this thesis: if
+fact-checking systems behave differently across languages, then language
+invariance becomes a useful objective to study directly.
+
+\subsection{Language Invariance and Cross-Lingual Consistency}
+\label{subsec:invariance}
+
+The main idea behind language invariance is simple: if two inputs express the
+same claim in different languages, a robust model should not change its judgment
+just because the language changed. This is especially important for the present
+task, where the model is expected to reason about the same numerical claim in
+English, Spanish, and Arabic. To make this idea useful experimentally, however,
+we need to be clear about what kind of consistency is being measured and how it
+is separated from accuracy.
+
+\paragraph{Defining consistency.}
+A useful starting point is the formal definition of consistency as stability under
+meaning-preserving changes to the input. In this view, a model is consistent if it
+gives non-contradictory predictions for two quasi-paraphrases of the same query.
+The consistency score is then the proportion of paraphrase pairs that lead to
+agreeing predictions~\cite{elazar2021measuringimprovingconsistencypretrained}. This definition is important
+because it makes consistency separate from accuracy. A model can be consistent and
+still be wrong, or it can be accurate on average while giving inconsistent answers
+to equivalent inputs.
+
+The same idea naturally extends from paraphrases within one language to
+translations across languages. If two versions of a claim have the same meaning,
+then a language-invariant model should give the same output for both. Prior work
+shows that this is not guaranteed. Multilingual factual-consistency studies find
+that encoder models such as mBERT and XLM-R are no more consistent across
+languages than a monolingual model is across English paraphrases, and that
+inconsistency increases when typologically distant languages are included
+\cite{Fierro_2022}. In this thesis, language invariance is therefore treated
+as cross-lingual consistency: agreement between a model's outputs for translated
+versions of the same input, measured separately from whether those outputs are
+correct.
+
+\paragraph{Measuring cross-lingual consistency.}
+Because consistency and accuracy are different properties, cross-lingual
+consistency should be evaluated on its own. Work on factual knowledge consistency
+shows that multilingual models often have low cross-lingual consistency, that
+larger model size alone does not reliably solve the problem, and that consistency
+is strongly related to subword-vocabulary overlap between languages
+\cite{Qi_2023}. This suggests that scripts and tokenization can affect
+cross-lingual behavior, not only reasoning ability.
+
+Different output types require different agreement measures. For categorical
+outputs such as claim verdicts, standard inter-rater agreement statistics are
+appropriate. Cohen's $\kappa$ measures agreement between two raters
+\cite{cohen1960coefficient}, Fleiss' $\kappa$ extends this idea to more than two
+raters~\cite{fleiss1971measuring}, and Krippendorff's $\alpha$ provides a more
+general reliability coefficient that can handle missing data
+\cite{krippendorff2004content}. Fleiss' $\kappa$ is also the statistic used in
+the multilingual LLM-as-a-judge work discussed earlier~\cite{fu2025reliablemultilingualllmasajudge}.
+For ranked outputs, agreement can instead be measured with rank-correlation
+statistics such as Kendall's $\tau$ and Spearman's $\rho$
+\cite{kendall1938new,spearman1904proof}, or with top-$k$ overlap measures such
+as Jaccard similarity.
+
+One caveat is important. Agreement in behavior does not necessarily mean that the
+model uses the same internal representation across languages. Recent work shows
+that models can answer consistently across languages while still storing
+knowledge separately, especially for languages written in different scripts
+\cite{ifergan2024beneathsurfaceconsistencyexploring}. For this reason, the thesis treats invariance as an
+observable behavioral property, not as proof of a fully shared multilingual
+reasoning mechanism.
+
+\paragraph{A measurement framing for this thesis.}
+In this thesis, language invariance is measured operationally. For a claim $c$
+expressed in the language set
+$\mathcal{L} = \{\text{English}, \text{Spanish}, \text{Arabic}\}$, let
+$\hat{y}_\ell(c)$ be the verdict predicted from the language-$\ell$ version of
+the claim. Our primary metric is \emph{verdict invariance}: whether the predicted
+claim verdict remains stable across languages. Concretely, we report the fraction
+of aligned claims for which all language-conditioned predictions agree, and we
+compute Fleiss' $\kappa$ over the verdicts
+$\{\hat{y}_\ell(c)\}_{\ell \in \mathcal{L}}$ by treating the predictions from the
+three languages as raters of the same claim~\cite{fleiss1971measuring}. We also
+report pairwise Cohen's $\kappa$~\cite{cohen1960coefficient} and Krippendorff's
+$\alpha$~\cite{krippendorff2004content} as supporting diagnostics.
+
+The system also produces a ranking of candidate reasoning traces. For a claim
+$c$, let $r_\ell(c)$ denote the trace ordering produced from the language-$\ell$
+version of the claim. As a secondary diagnostic, we measure ranking-level
+invariance by comparing these orderings across languages using mean pairwise
+Kendall's $\tau$, Spearman's $\rho$~\cite{kendall1938new,spearman1904proof}, and
+top-$k$ Jaccard overlap over the ranked trace indices. These ranking metrics are
+not the primary invariance measure, but they help show whether cross-lingual
+stability appears in the trace ranking itself or only in the final verdict.
+
+Finally, the training objective uses a different level of invariance. During
+training, invariance is encouraged at the score level: the model is penalized when
+it assigns different normalized score vectors to the same aligned traces across
+languages. This score-level regularizer is related to the consistency objectives
+discussed in Section~\ref{subsec:peft}, while the exact formulation is given in
+the methodology section. Throughout the thesis, invariance is reported separately
+from task accuracy. This separation is essential for RQ2, because a model may be
+consistent but wrong, or accurate but unstable across languages
+\cite{elazar2021measuringimprovingconsistencypretrained, Qi_2023}.
+
+\subsection{Cross-Lingual Representations and the Latent Language}
+\label{subsec:representations}
+
+Language invariance is only plausible if multilingual models share at least some
+representation of meaning across languages. A large body of work suggests that
+this is partly the case. Studies of mBERT show that it can transfer across
+languages in a zero-shot setting, even across different scripts, although transfer
+quality depends on factors such as typological similarity~\cite{pires2019multilingualmultilingualbert}.
+Other work shows that shared multilingual structure can emerge even without a
+shared vocabulary~\cite{wu2020emergingcrosslingualstructurepretrained}. Large-scale multilingual
+pre-training, as in XLM-R, further improves transfer across many languages
+\cite{conneau2020unsupervisedcrosslingualrepresentationlearning}. Explicit alignment methods can also bring
+contextual representations closer across languages and improve cross-lingual
+transfer~\cite{cao2020multilingualalignmentcontextualword}. A recent survey provides a broader overview
+of these alignment ideas and how they are evaluated~\cite{hämmerl2024understandingcrosslingualalignment}.
+
+For decoder-only LLMs, recent interpretability work points to a related but more
+complicated picture. Logit-lens analyses suggest that models such as Llama process
+multilingual inputs through intermediate representations that are often closest
+to English before producing an answer in the target language. This has been
+described as operating through a latent language~\cite{wendler2024llamasworkenglishlatent}.
+Similarly, other work finds that semantic decisions in multilingual LLMs are made
+in a representation space close to English, and that interventions are most
+effective when applied in that space~\cite{schut2025multilingualllmsthinkenglish}. Representational
+similarity analyses also suggest that reasoning-like behavior is only partly
+aligned across languages~\cite{STOLLE2026100250}.
+
+These findings support one of the assumptions behind this thesis: if multilingual
+models already share part of their semantic space, then language-invariant
+training may encourage the model to use that shared space more consistently. In
+that sense, invariance can act as an inductive bias for more robust multilingual
+reasoning (RQ3). However, this should be interpreted carefully. A model can give
+the same answer in different languages without necessarily using the same internal
+representation in each case~\cite{ifergan2024beneathsurfaceconsistencyexploring}. Therefore, the thesis
+treats behavioral invariance as useful evidence of cross-lingual stability, but
+not as proof of a fully language-independent reasoning mechanism.
+
+\subsection{Numerical Reasoning Across Languages and Value-Aware Representations}
+\label{subsec:numeric}
+
+Numerical reasoning is a known weakness of LLMs. Even when the required operation
+is simple, models can behave unreliably. Probing studies describe this as a
+fragile number sense, where models fail on elementary numerical tasks that should
+in principle be straightforward~\cite{rahman2025fragilenumbersenseprobing}. Smaller diagnostic
+tests reach similar conclusions~\cite{rahman2025largelanguagemodelsnumberland}. Benchmarks such as
+NumGLUE~\cite{mishra2022numgluesuitefundamentalchallenging} and broader quantitative-reasoning evaluations
+\cite{lewkowycz2022solvingquantitativereasoningproblems} show that numerical reasoning is a demanding test of
+whether a model understands quantities, rather than only the surrounding text.
+
+One reason this is difficult is that standard token representations do not encode
+numerical magnitude directly. A number is usually treated as a sequence of tokens,
+and the model has to infer its value from that surface form. Earlier probing work
+showed that some embeddings capture numerical magnitude surprisingly well, but
+also that subword tokenization limits exact numeracy~\cite{wallace2019nlpmodelsknownumbers}.
+Value-aware approaches address this problem by encoding the numerical value of a
+span, instead of relying only on its textual representation~\cite{dutulescu2026valueawarenumericalrepresentationstransformer}.
+Related number-encoding methods expose canonical numerical information more
+directly to the model~\cite{schwartz2024numerologicnumberencodingenhanced}.
+
+This issue becomes even more important in a multilingual setting. The task studied
+in this thesis is not only numerical, but also cross-lingual: the model must
+handle numerical claims in English, Spanish, and Arabic. Multilingual
+chain-of-thought evaluations, including the MGSM benchmark, show that quantitative
+reasoning quality varies across languages even when the underlying arithmetic is
+the same~\cite{shi2022languagemodelsmultilingualchainofthought}. This means that language can affect numerical
+reasoning even when the mathematical problem itself has not changed.
+
+Recent work makes this point even more directly by isolating the surface form of
+the number. When the same arithmetic problem is written with different numeral
+scripts or formats, model accuracy can drop substantially for underrepresented
+scripts. This effect is partly linked to tokenization, although targeted prompting
+and explicit numeral mapping can reduce the gap~\cite{reddy2026effectscriptsformatsllm}. Related
+analyses show that models also struggle to infer the compositional structure of
+numerals across languages unless the relevant operations are made symbolically
+explicit~\cite{bhattacharya2025investigatinginteractionlinguisticmathematical}.
+
+These findings matter for this thesis because numeral script is another source of
+cross-lingual variation. If a model changes its quantitative judgment when the
+same number is written in a different script, then numerical fact-checking becomes
+a particularly demanding setting for language invariance. Value-aware numerical
+representations and numerical normalization are therefore relevant not only as a way to improve numerical
+accuracy, but also as a possible way to reduce cross-lingual inconsistency. This
+is especially important for the Arabic part of the task, where script and numeral
+format may introduce additional variation.
+
+\subsection{Preference Optimization and Parameter-Efficient Fine-Tuning}
+\label{subsec:peft}
+
+The training setup in this thesis builds on two practical lines of work:
+preference optimization and parameter-efficient fine-tuning. Direct Preference
+Optimization (DPO) trains a model from pairwise preferences by increasing the
+relative likelihood of preferred outputs over rejected ones, while keeping the
+model close to a reference policy. This makes it possible to optimize preferences
+without training a separate reward model or using reinforcement learning
+\cite{rafailov2024directpreferenceoptimizationlanguage}.
+
+For the fine-tuning itself, parameter-efficient methods are important because the
+models used in this thesis are too large to update fully under a modest GPU
+budget. Low-Rank Adaptation (LoRA) addresses this by freezing the base model and
+training only a small set of low-rank update matrices~\cite{hu2021loralowrankadaptationlarge}.
+Quantized LoRA (QLoRA) reduces memory use further by loading the base model in
+low precision and training adapters on top of it~\cite{dettmers2023qloraefficientfinetuningquantized}. These
+methods make it feasible to adapt open-weight instruction-tuned models such as
+Mistral-7B~\cite{jiang2023mistral7b}, Qwen3-8b\cite{qwen3technicalreport} and Llama-3.1-8B-Instruct
+\cite{llama31instruct}, which are the scale of models used in the experiments.
+
+Recent work has also started to use these kinds of objectives for cross-lingual
+consistency. Consistency regularization penalizes a model when its predictions
+change under meaning-preserving perturbations, such as code-switching or machine
+translation~\cite{zheng2021consistencyregularizationcrosslingualfinetuning}. Cross-lingual self-alignment extends the
+preference-optimization idea by sampling answers in several languages, selecting
+the most self-consistent answer as the preferred target, and applying DPO to align
+the model's knowledge across languages~\cite{wang2025calmunleashingcrosslingualselfaligning}. Direct Consistency
+Optimization is even closer to the goal of this thesis: it adapts the DPO
+formulation to align completion likelihoods across parallel prompts in different
+languages, without requiring an explicit reward model~\cite{liu2026posttraininglanguagemodelscrosslingual}.
+
+These methods show that preference optimization can be used for consistency, not
+only for general output quality. However, most of this work evaluates consistency
+through factual question answering or broad benchmarks. It does not directly test
+whether optimizing for cross-lingual consistency improves ranking performance in
+a numerical fact-checking task. That is the gap addressed by RQ1: whether an
+invariance-oriented objective can improve the ranking itself, rather than simply
+making outputs agree across languages.
+
+\subsection{Positioning of This Thesis}
+\label{subsec:positioning}
+
+The work reviewed above points to a clear gap. LLM rankers and judges are
+sensitive to presentation details such as candidate order and prompt format
+\cite{shi2025judgingjudgessystematicstudy, qiao2026llmbasedlistwisererankingeffect}.
+They are also often not language-invariant: the same model can produce different
+verdicts or rankings for semantically equivalent inputs in different languages,
+and this inconsistency is not reliably solved by larger model scale or
+multilingual pre-training~\cite{fu2025reliablemultilingualllmasajudge, Qi_2023,
+Fierro_2022}. At the same time, multilingual models do appear to learn partly
+shared, partly English-centric representations~\cite{wendler2024llamasworkenglishlatent,
+conneau2020unsupervisedcrosslingualrepresentationlearning}. This suggests that
+language-invariant behavior may be attainable, while still leaving open the
+caution that behavioral agreement does not necessarily prove a shared internal
+representation~\cite{ifergan2024beneathsurfaceconsistencyexploring}.
+
+The numerical side of the task adds another layer of difficulty. Prior work shows
+that numerical reasoning is fragile and only partly captured by standard token
+representations~\cite{wallace2019nlpmodelsknownumbers,
+rahman2025fragilenumbersenseprobing}. It is also sensitive to numeral script and
+format across languages~\cite{reddy2026effectscriptsformatsllm}. This matters for
+the present thesis because the task is not only multilingual, but also numerical:
+the model must rank reasoning traces for claims whose quantities may appear in
+different linguistic and script forms. Finally, recent work shows that preference
+optimization and consistency regularization can be aimed at cross-lingual
+consistency rather than output quality alone
+\cite{liu2026posttraininglanguagemodelscrosslingual,
+wang2025calmunleashingcrosslingualselfaligning,
+zheng2021consistencyregularizationcrosslingualfinetuning}. What remains unclear
+is whether treating language invariance as a training objective actually improves
+multilingual reasoning in a trace-ranking fact-checking setting.
+
+This thesis addresses that gap using the CLEF~CheckThat!~2026 Task~2 setting,
+where systems rank candidate reasoning traces and produce a final verdict for
+numerical claims in English, Spanish, and Arabic. The three research questions
+separate the problem into ranking performance, the relationship between invariance
+and reasoning quality, and broader multilingual robustness.
+
+\paragraph{RQ1: Does optimizing for language-invariant reasoning improve ranking performance?}
+Prior work shows that consistency can be optimized directly
+\cite{zheng2021consistencyregularizationcrosslingualfinetuning,
+wang2025calmunleashingcrosslingualselfaligning,
+liu2026posttraininglanguagemodelscrosslingual}, but most of this work evaluates
+the result on factual question answering or general benchmarks. RQ1 asks whether
+the same idea helps in a ranking-based fact-checking task. In particular, it
+tests whether adding a language-invariance objective to the trace scorer improves
+the official ranking metrics, rather than only making outputs more similar across
+languages. This connects to work on ranking bias
+\cite{shi2025judgingjudgessystematicstudy,
+qiao2026llmbasedlistwisererankingeffect,
+qin2024largelanguagemodelseffective}: if rankings are affected by irrelevant
+variation in the input, then reducing language-driven variation may make the
+ranking more reliable.
+
+\paragraph{RQ2: What is the relationship between language invariance and reasoning quality across languages?}
+Consistency is not the same as accuracy~\cite{elazar2021measuringimprovingconsistencypretrained,
+Qi_2023}. A model can be stable across languages but wrong, or accurate in one
+language while unstable across others. RQ2 therefore measures invariance and
+per-language reasoning quality separately, then analyzes how they relate across
+English, Spanish, and Arabic. The thesis does not assume that the relationship is
+simple or monotonic. Prior work suggests that cross-lingual consistency can be
+affected by vocabulary overlap and script~\cite{Qi_2023}, and that agreement
+across languages does not necessarily imply shared internal representations
+\cite{ifergan2024beneathsurfaceconsistencyexploring}. For this reason, RQ2 treats
+the link between invariance and reasoning quality as an empirical question.
+
+\paragraph{RQ3: Can language-invariant training objectives lead to more robust multilingual reasoning models?}
+The representational evidence reviewed above suggests that multilingual models
+share part of their semantic space
+\cite{wendler2024llamasworkenglishlatent, schut2025multilingualllmsthinkenglish,
+conneau2020unsupervisedcrosslingualrepresentationlearning}. RQ3 asks whether a
+language-invariant objective can use this shared structure as an inductive bias
+for more robust multilingual reasoning. This is tested across English, Spanish,
+and Arabic, with particular attention to Arabic because script and tokenization
+can introduce additional variation~\cite{reddy2026effectscriptsformatsllm}. The
+numerical dimension is also important: value-aware numerical representations and
+number-encoding methods are considered as complementary ways to reduce variation
+caused by the surface form of quantities
+\cite{dutulescu2026valueawarenumericalrepresentationstransformer,
+schwartz2024numerologicnumberencodingenhanced}.

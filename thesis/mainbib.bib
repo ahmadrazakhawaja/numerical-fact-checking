@@ -1,0 +1,629 @@
+
+@misc{WeiWSB23,
+	title = {Chain-of-{Thought} {Prompting} {Elicits} {Reasoning} in {Large} {Language} {Models}},
+	url = {http://arxiv.org/abs/2201.11903},
+	abstract = {We explore how generating a chain of thought -- a series of intermediate reasoning steps -- significantly improves the ability of large language models to perform complex reasoning. In particular, we show how such reasoning abilities emerge naturally in sufficiently large language models via a simple method called chain of thought prompting, where a few chain of thought demonstrations are provided as exemplars in prompting. Experiments on three large language models show that chain of thought prompting improves performance on a range of arithmetic, commonsense, and symbolic reasoning tasks. The empirical gains can be striking. For instance, prompting a 540B-parameter language model with just eight chain of thought exemplars achieves state of the art accuracy on the GSM8K benchmark of math word problems, surpassing even finetuned GPT-3 with a verifier.},
+	urldate = {2023-02-24},
+	publisher = {arXiv},
+	author = {Wei, Jason and Wang, Xuezhi and Schuurmans, Dale and Bosma, Maarten and Ichter, Brian and Xia, Fei and Chi, Ed and Le, Quoc and Zhou, Denny},
+	month = jan,
+	year = {2023},
+	note = {tex.ids= WeiWSB23a, WeiWSB23b
+arXiv: 2201.11903 [cs]},
+	keywords = {!tr, Computer Science - Computation and Language, nlp\_explain, Computer Science - Artificial Intelligence, nlp\_prompt, nlp\_lm},
+	file = {arXiv.org Snapshot:C\:\\Users\\snake\\Zotero\\storage\\MIWU3LCQ\\2201.html:text/html;arXiv.org Snapshot:C\:\\Users\\snake\\Zotero\\storage\\J7TBQ74H\\2201.html:text/html;WeiWSB23--tr--chain-of-thought_prompting_elicits_reasoning_in_large_language_models.pdf:C\:\\Users\\snake\\Zotero\\storage\\SHNB9VM3\\WeiWSB23--tr--chain-of-thought_prompting_elicits_reasoning_in_large_language_models.pdf:application/pdf},
+}
+
+% ============================================================
+% References for the Related Work chapter (extended)
+% Compiled from the CheckThat! 2026 working notes, the two thesis
+% proposal drafts, and additional researched literature on
+% language invariance / cross-lingual consistency.
+% Deduplicated across sources. Verified entries are marked; a few
+% recent preprints are flagged in the cover note for re-checking.
+% ============================================================
+
+% ============================================================
+% References for the Related Work chapter (extended)
+% Compiled from the CheckThat! 2026 working notes, the two thesis
+% proposal drafts, and additional researched literature on
+% language invariance / cross-lingual consistency.
+% Deduplicated across sources. Verified entries are marked; a few
+% recent preprints are flagged in the cover note for re-checking.
+% ============================================================
+
+% ============================================================
+% References for the Related Work chapter (extended)
+% Compiled from the CheckThat! 2026 working notes, the two thesis
+% proposal drafts, and additional researched literature on
+% language invariance / cross-lingual consistency.
+% Deduplicated across sources. Verified entries are marked; a few
+% recent preprints are flagged in the cover note for re-checking.
+% ============================================================
+
+% ------------------------------------------------------------
+% LLM-based ranking and reranking
+% ------------------------------------------------------------
+
+@misc{qin2024largelanguagemodelseffective,
+      title={Large Language Models are Effective Text Rankers with Pairwise Ranking Prompting}, 
+      author={Zhen Qin and Rolf Jagerman and Kai Hui and Honglei Zhuang and Junru Wu and Le Yan and Jiaming Shen and Tianqi Liu and Jialu Liu and Donald Metzler and Xuanhui Wang and Michael Bendersky},
+      year={2024},
+      eprint={2306.17563},
+      archivePrefix={arXiv},
+      primaryClass={cs.IR},
+      url={https://arxiv.org/abs/2306.17563}, 
+}
+
+@inproceedings{liu-etal-2025-lipo,
+    title = "{L}i{PO}: Listwise Preference Optimization through Learning-to-Rank",
+    author = "Liu, Tianqi  and
+      Qin, Zhen  and
+      Wu, Junru  and
+      Shen, Jiaming  and
+      Khalman, Misha  and
+      Joshi, Rishabh  and
+      Zhao, Yao  and
+      Saleh, Mohammad  and
+      Baumgartner, Simon  and
+      Liu, Jialu  and
+      Liu, Peter J  and
+      Wang, Xuanhui",
+    editor = "Chiruzzo, Luis  and
+      Ritter, Alan  and
+      Wang, Lu",
+    booktitle = "Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)",
+    month = apr,
+    year = "2025",
+    address = "Albuquerque, New Mexico",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.naacl-long.121/",
+    doi = "10.18653/v1/2025.naacl-long.121",
+    pages = "2404--2420",
+    ISBN = "979-8-89176-189-6",
+    abstract = "Aligning language models (LMs) with curated human feedback is critical to control their behaviors in real-world applications. Several recent policy optimization methods, such as DPO and SLiC, serve as promising alternatives to the traditional Reinforcement Learning from Human Feedback (RLHF) approach.In practice, human feedback often comes in a format of a ranked list over multiple responses to amortize the cost of reading prompt. Multiple responses can also be ranked by reward models or AI feedback. There lacks such a thorough study on directly fitting upon a list of responses. In this work, we formulate the LM alignment as a listwise ranking problem and describe the LiPO framework, where the policy can potentially learn more effectively from a ranked list of plausible responses given the prompt. This view draws an explicit connection to Learning-to-Rank (LTR), where most existing preference optimization work can be mapped to existing ranking objectives. Following this connection, we provide an examination of ranking objectives that are not well studied for LM alignment, with DPO and SLiC as special cases when list size is two. In particular, we highlight a specific method, LiPO-$\lambda$, which leverages a state-of-the-art listwise ranking objective and weights each preference pair in a more advanced manner. We show that LiPO-$\lambda$ can outperform DPO variants and SLiC by a clear margin on several preference alignment tasks with both curated and real rankwise preference data."
+}
+
+@misc{qiao2026llmbasedlistwisererankingeffect,
+      title={LLM-based Listwise Reranking under the Effect of Positional Bias}, 
+      author={Jingfen Qiao and Jin Huang and Xinyu Ma and Shuaiqiang Wang and Dawei Yin and Evangelos Kanoulas and Andrew Yates},
+      year={2026},
+      eprint={2604.03642},
+      archivePrefix={arXiv},
+      primaryClass={cs.IR},
+      url={https://arxiv.org/abs/2604.03642}, 
+}
+
+% ------------------------------------------------------------
+% Biases in LLM-as-a-judge evaluation
+% ------------------------------------------------------------
+
+@misc{shi2025judgingjudgessystematicstudy,
+      title={Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge}, 
+      author={Lin Shi and Chiyu Ma and Wenhua Liang and Xingjian Diao and Weicheng Ma and Soroush Vosoughi},
+      year={2025},
+      eprint={2406.07791},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2406.07791}, 
+}
+
+@misc{fu2025reliablemultilingualllmasajudge,
+      title={How Reliable is Multilingual LLM-as-a-Judge?}, 
+      author={Xiyan Fu and Wei Liu},
+      year={2025},
+      eprint={2505.12201},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2505.12201}, 
+}
+
+% ------------------------------------------------------------
+% Automated and multilingual fact-checking
+% ------------------------------------------------------------
+
+@misc{sahitaj2025automatedfactcheckingrealworldclaims,
+      title={Towards Automated Fact-Checking of Real-World Claims: Exploring Task Formulation and Assessment with LLMs}, 
+      author={Premtim Sahitaj and Iffat Maab and Junichi Yamagishi and Jawan Kolanowski and Sebastian Möller and Vera Schmitt},
+      year={2025},
+      eprint={2502.08909},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2502.08909}, 
+}
+
+@misc{v2024quantemprealworldopendomainbenchmark,
+      title={QuanTemp: A real-world open-domain benchmark for fact-checking numerical claims}, 
+      author={Venktesh V and Abhijit Anand and Avishek Anand and Vinay Setty},
+      year={2024},
+      eprint={2403.17169},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2403.17169}, 
+}
+
+@misc{chungkham2025thinkrightmoretesttime,
+      title={Think Right, Not More: Test-Time Scaling for Numerical Claim Verification}, 
+      author={Primakov Chungkham and V Venktesh and Vinay Setty and Avishek Anand},
+      year={2025},
+      eprint={2509.22101},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2509.22101}, 
+}
+
+@inproceedings{clef-checkthat:2026:task2,
+   title     = {Overview of the {CLEF-2026 CheckThat!} Lab Task 2 on Fact-Checking Numerical Claims},
+   author    = {
+      V, Venktesh and
+      Setty, Vinay and
+      Chungkham, Primakov and
+      Anand, Avishek
+   },
+   crossref  = {clef2026-workingnotes}
+}
+@proceedings{clef2026-workingnotes,
+  title = {{CLEF} 2026 Working Notes},
+  editor = {
+     Salido, Eva S{\'a}nchez
+     and Barr{\'o}n-Cede{\~n}o, Alberto
+     and {Alba Garc{\'i}a Seco de Herrera}
+     and MacAvaney, Sean
+     and Stru{\ss}, Julia Maria},
+  series = {CLEF~2026},
+  address = {Jena, Germany},
+  year = 2026
+}
+
+@misc{gupta2021xfactnewbenchmarkdataset,
+      title={X-FACT: A New Benchmark Dataset for Multilingual Fact Checking}, 
+      author={Ashim Gupta and Vivek Srikumar},
+      year={2021},
+      eprint={2106.09248},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2106.09248}, 
+}
+
+@misc{chang2023xfeverexploringfactverification,
+      title={XFEVER: Exploring Fact Verification across Languages}, 
+      author={Yi-Chen Chang and Canasai Kruengkrai and Junichi Yamagishi},
+      year={2023},
+      eprint={2310.16278},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2310.16278}, 
+}
+
+@misc{jiang2020xfactrmultilingualfactualknowledge,
+      title={X-FACTR: Multilingual Factual Knowledge Retrieval from Pretrained Language Models}, 
+      author={Zhengbao Jiang and Antonios Anastasopoulos and Jun Araki and Haibo Ding and Graham Neubig},
+      year={2020},
+      eprint={2010.06189},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2010.06189}, 
+}
+
+% ------------------------------------------------------------
+% Language invariance and cross-lingual consistency
+% ------------------------------------------------------------
+
+@misc{elazar2021measuringimprovingconsistencypretrained,
+      title={Measuring and Improving Consistency in Pretrained Language Models}, 
+      author={Yanai Elazar and Nora Kassner and Shauli Ravfogel and Abhilasha Ravichander and Eduard Hovy and Hinrich Schütze and Yoav Goldberg},
+      year={2021},
+      eprint={2102.01017},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2102.01017}, 
+}
+
+@inproceedings{Fierro_2022,
+   title={Factual Consistency of Multilingual Pretrained Language Models},
+   url={http://dx.doi.org/10.18653/v1/2022.findings-acl.240},
+   DOI={10.18653/v1/2022.findings-acl.240},
+   booktitle={Findings of the Association for Computational Linguistics: ACL 2022},
+   publisher={Association for Computational Linguistics},
+   author={Fierro, Constanza and Søgaard, Anders},
+   year={2022},
+   pages={3046–3052} }
+
+@inproceedings{Qi_2023,
+   title={Cross-Lingual Consistency of Factual Knowledge in Multilingual Language Models},
+   url={http://dx.doi.org/10.18653/v1/2023.emnlp-main.658},
+   DOI={10.18653/v1/2023.emnlp-main.658},
+   booktitle={Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing},
+   publisher={Association for Computational Linguistics},
+   author={Qi, Jirui and Fernández, Raquel and Bisazza, Arianna},
+   year={2023},
+   pages={10650–10666} }
+
+@misc{ifergan2024beneathsurfaceconsistencyexploring,
+      title={Beneath the Surface of Consistency: Exploring Cross-lingual Knowledge Representation Sharing in LLMs}, 
+      author={Maxim Ifergan and Leshem Choshen and Roee Aharoni and Idan Szpektor and Omri Abend},
+      year={2024},
+      eprint={2408.10646},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2408.10646}, 
+}
+
+% ------------------------------------------------------------
+% Cross-lingual representations and the latent language
+% ------------------------------------------------------------
+
+@misc{pires2019multilingualmultilingualbert,
+      title={How multilingual is Multilingual BERT?}, 
+      author={Telmo Pires and Eva Schlinger and Dan Garrette},
+      year={2019},
+      eprint={1906.01502},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/1906.01502}, 
+}
+
+@misc{wu2020emergingcrosslingualstructurepretrained,
+      title={Emerging Cross-lingual Structure in Pretrained Language Models}, 
+      author={Shijie Wu and Alexis Conneau and Haoran Li and Luke Zettlemoyer and Veselin Stoyanov},
+      year={2020},
+      eprint={1911.01464},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/1911.01464}, 
+}
+
+@misc{conneau2020unsupervisedcrosslingualrepresentationlearning,
+      title={Unsupervised Cross-lingual Representation Learning at Scale}, 
+      author={Alexis Conneau and Kartikay Khandelwal and Naman Goyal and Vishrav Chaudhary and Guillaume Wenzek and Francisco Guzmán and Edouard Grave and Myle Ott and Luke Zettlemoyer and Veselin Stoyanov},
+      year={2020},
+      eprint={1911.02116},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/1911.02116}, 
+}
+
+@misc{cao2020multilingualalignmentcontextualword,
+      title={Multilingual Alignment of Contextual Word Representations}, 
+      author={Steven Cao and Nikita Kitaev and Dan Klein},
+      year={2020},
+      eprint={2002.03518},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2002.03518}, 
+}
+
+@misc{hämmerl2024understandingcrosslingualalignment,
+      title={Understanding Cross-Lingual Alignment -- A Survey}, 
+      author={Katharina Hämmerl and Jindřich Libovický and Alexander Fraser},
+      year={2024},
+      eprint={2404.06228},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2404.06228}, 
+}
+
+@misc{wendler2024llamasworkenglishlatent,
+      title={Do Llamas Work in English? On the Latent Language of Multilingual Transformers}, 
+      author={Chris Wendler and Veniamin Veselovsky and Giovanni Monea and Robert West},
+      year={2024},
+      eprint={2402.10588},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2402.10588}, 
+}
+
+@misc{schut2025multilingualllmsthinkenglish,
+      title={Do Multilingual LLMs Think In English?}, 
+      author={Lisa Schut and Yarin Gal and Sebastian Farquhar},
+      year={2025},
+      eprint={2502.15603},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2502.15603}, 
+}
+
+@article{STOLLE2026100250,
+title = {The reasoning-like capabilities of large language models across different languages: Insights from representational similarity analysis},
+journal = {Computers in Human Behavior: Artificial Humans},
+volume = {7},
+pages = {100250},
+year = {2026},
+issn = {2949-8821},
+doi = {https://doi.org/10.1016/j.chbah.2026.100250},
+url = {https://www.sciencedirect.com/science/article/pii/S2949882126000010},
+author = {Chris M. Stolle and Rongjun Yu and Yi Huang},
+keywords = {Large language models, Language effect, Representational similarity analysis, Neural network, Reasoning capabilities},
+abstract = {Recent research shows that Large Language Models (LLMs) demonstrate human-comparable performance on various cognitive tasks, suggesting reasoning-like capabilities. However, the language dependency of these capabilities and the contribution of their neural network states remain underexplored. This study investigates how different prompts and languages influence the reasoning performance of LLMs compared to humans, while exploring the internal cognitive-like processes of LLMs through representational similarity analysis (RSA). Using scenario-based and mathematical Cognitive Reflection Test (CRT) questions across four languages, we evaluated the reasoning capabilities of LLM Qwen 2.5 (including Gemma 2.9 and Llama 3.1 replications). Results showed that language significantly impacts performance in scenario-based CRT that requires nuanced semantic processing. However, RSA of the inner state activations revealed that the LLM processed identical questions similarly across languages, suggesting that the model encodes semantics in a language-independent latent space. Additionally, the LLM's performance improved when it verbalised its reasoning, and this verbalisation increased similarity in activations. Layer-wise analyses revealed a U-shaped similarity pattern across early to late layers in Qwen and Gemma but not Llama. Furthermore, scenario-based and equivalent mathematical CRT versions elicited similar activation patterns for the paired questions, even after controlling for input and output confounds, pointing to format-agnostic reasoning mechanisms. These results highlight that while LLMs exhibit language-invariant semantic representations and format-agnostic reasoning, their performance remains sensitive to linguistic nuances and self-generated verbalisations, offering insights into both the strengths and limitations of their cognitive-like processing.}
+}
+
+@article{huang2024survey,
+  title   = {A Survey on Large Language Models with Multilingualism: Recent Advances and New Frontiers},
+  author  = {Huang, Kaiyu and Mo, Fengran and Zhang, Xinyu and Li, Hongliang and Li, You and Zhang, Yuanchi and Yi, Weijian and Mao, Yulong and Liu, Jinchen and Xu, Yuzhuang and others},
+  journal = {arXiv preprint arXiv:2405.10936},
+  year    = {2024}
+}
+
+@inproceedings{dang2024rlhf,
+  title     = {{RLHF} Can Speak Many Languages: Unlocking Multilingual Preference Optimization for {LLMs}},
+  author    = {Dang, John and Ahmadian, Arash and Marchisio, Kelly and Kreutzer, Julia and {\"U}st{\"u}n, Ahmet and Hooker, Sara},
+  booktitle = {Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing},
+  pages     = {13134--13156},
+  year      = {2024}
+}
+
+% ------------------------------------------------------------
+% Numerical reasoning across languages and value-aware representations
+% ------------------------------------------------------------
+
+@misc{rahman2025fragilenumbersenseprobing,
+      title={A Fragile Number Sense: Probing the Elemental Limits of Numerical Reasoning in LLMs}, 
+      author={Roussel Rahman and Aashwin Ananda Mishra},
+      year={2025},
+      eprint={2509.06332},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2509.06332}, 
+}
+
+@misc{rahman2025largelanguagemodelsnumberland,
+      title={Large Language Models in Numberland: A Quick Test of Their Numerical Reasoning Abilities}, 
+      author={Roussel Rahman},
+      year={2025},
+      eprint={2504.00226},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2504.00226}, 
+}
+
+@misc{mishra2022numgluesuitefundamentalchallenging,
+      title={NumGLUE: A Suite of Fundamental yet Challenging Mathematical Reasoning Tasks}, 
+      author={Swaroop Mishra and Arindam Mitra and Neeraj Varshney and Bhavdeep Sachdeva and Peter Clark and Chitta Baral and Ashwin Kalyan},
+      year={2022},
+      eprint={2204.05660},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2204.05660}, 
+}
+
+@misc{lewkowycz2022solvingquantitativereasoningproblems,
+      title={Solving Quantitative Reasoning Problems with Language Models}, 
+      author={Aitor Lewkowycz and Anders Andreassen and David Dohan and Ethan Dyer and Henryk Michalewski and Vinay Ramasesh and Ambrose Slone and Cem Anil and Imanol Schlag and Theo Gutman-Solo and Yuhuai Wu and Behnam Neyshabur and Guy Gur-Ari and Vedant Misra},
+      year={2022},
+      eprint={2206.14858},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2206.14858}, 
+}
+
+@misc{wallace2019nlpmodelsknownumbers,
+      title={Do NLP Models Know Numbers? Probing Numeracy in Embeddings}, 
+      author={Eric Wallace and Yizhong Wang and Sujian Li and Sameer Singh and Matt Gardner},
+      year={2019},
+      eprint={1909.07940},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/1909.07940}, 
+}
+
+@misc{shi2022languagemodelsmultilingualchainofthought,
+      title={Language Models are Multilingual Chain-of-Thought Reasoners}, 
+      author={Freda Shi and Mirac Suzgun and Markus Freitag and Xuezhi Wang and Suraj Srivats and Soroush Vosoughi and Hyung Won Chung and Yi Tay and Sebastian Ruder and Denny Zhou and Dipanjan Das and Jason Wei},
+      year={2022},
+      eprint={2210.03057},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2210.03057}, 
+}
+
+@misc{dutulescu2026valueawarenumericalrepresentationstransformer,
+      title={Value-Aware Numerical Representations for Transformer Language Models}, 
+      author={Andreea Dutulescu and Stefan Ruseti and Mihai Dascalu},
+      year={2026},
+      eprint={2601.09706},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2601.09706}, 
+}
+
+@misc{schwartz2024numerologicnumberencodingenhanced,
+      title={NumeroLogic: Number Encoding for Enhanced LLMs' Numerical Reasoning}, 
+      author={Eli Schwartz and Leshem Choshen and Joseph Shtok and Sivan Doveh and Leonid Karlinsky and Assaf Arbelle},
+      year={2024},
+      eprint={2404.00459},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2404.00459}, 
+}
+
+@misc{reddy2026effectscriptsformatsllm,
+      title={The Effect of Scripts and Formats on LLM Numeracy}, 
+      author={Varshini Reddy and Craig W. Schmidt and Seth Ebner and Adam Wiemerslage and Yuval Pinter and Chris Tanner},
+      year={2026},
+      eprint={2601.15251},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2601.15251}, 
+}
+
+@misc{bhattacharya2025investigatinginteractionlinguisticmathematical,
+      title={Investigating the interaction of linguistic and mathematical reasoning in language models using multilingual number puzzles}, 
+      author={Antara Raaghavi Bhattacharya and Isabel Papadimitriou and Kathryn Davidson and David Alvarez-Melis},
+      year={2025},
+      eprint={2506.13886},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2506.13886}, 
+}
+
+% ------------------------------------------------------------
+% Preference optimization, consistency objectives, and PEFT
+% ------------------------------------------------------------
+
+@misc{rafailov2024directpreferenceoptimizationlanguage,
+      title={Direct Preference Optimization: Your Language Model is Secretly a Reward Model}, 
+      author={Rafael Rafailov and Archit Sharma and Eric Mitchell and Stefano Ermon and Christopher D. Manning and Chelsea Finn},
+      year={2024},
+      eprint={2305.18290},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2305.18290}, 
+}
+
+@misc{zheng2021consistencyregularizationcrosslingualfinetuning,
+      title={Consistency Regularization for Cross-Lingual Fine-Tuning}, 
+      author={Bo Zheng and Li Dong and Shaohan Huang and Wenhui Wang and Zewen Chi and Saksham Singhal and Wanxiang Che and Ting Liu and Xia Song and Furu Wei},
+      year={2021},
+      eprint={2106.08226},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2106.08226}, 
+}
+
+@misc{wang2025calmunleashingcrosslingualselfaligning,
+      title={CALM: Unleashing the Cross-Lingual Self-Aligning Ability of Language Model Question Answering}, 
+      author={Yumeng Wang and Zhiyuan Fan and Qingyun Wang and May Fung and Heng Ji},
+      year={2025},
+      eprint={2501.18457},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2501.18457}, 
+}
+
+@misc{liu2026posttraininglanguagemodelscrosslingual,
+      title={Post-Training Language Models for Crosslingual Consistency}, 
+      author={Tianyu Liu and Jirui Qi and Mrinmaya Sachan and Ryan Cotterell and Raquel Fernández and Arianna Bisazza},
+      year={2026},
+      eprint={2603.04678},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2603.04678}, 
+}
+
+@misc{hu2021loralowrankadaptationlarge,
+      title={LoRA: Low-Rank Adaptation of Large Language Models}, 
+      author={Edward J. Hu and Yelong Shen and Phillip Wallis and Zeyuan Allen-Zhu and Yuanzhi Li and Shean Wang and Lu Wang and Weizhu Chen},
+      year={2021},
+      eprint={2106.09685},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2106.09685}, 
+}
+
+@misc{dettmers2023qloraefficientfinetuningquantized,
+      title={QLoRA: Efficient Finetuning of Quantized LLMs}, 
+      author={Tim Dettmers and Artidoro Pagnoni and Ari Holtzman and Luke Zettlemoyer},
+      year={2023},
+      eprint={2305.14314},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2305.14314}, 
+}
+
+@misc{jiang2023mistral7b,
+      title={Mistral 7B}, 
+      author={Albert Q. Jiang and Alexandre Sablayrolles and Arthur Mensch and Chris Bamford and Devendra Singh Chaplot and Diego de las Casas and Florian Bressand and Gianna Lengyel and Guillaume Lample and Lucile Saulnier and Lélio Renard Lavaud and Marie-Anne Lachaux and Pierre Stock and Teven Le Scao and Thibaut Lavril and Thomas Wang and Timothée Lacroix and William El Sayed},
+      year={2023},
+      eprint={2310.06825},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2310.06825}, 
+}
+
+@misc{llama31instruct,
+  title  = {Meta {Llama} 3.1 8{B} Instruct},
+  author = {{Meta AI}},
+  year   = {2024},
+  note   = {Accessed: 2026-05-17},
+  url    = {https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct}
+}
+
+@misc{qwen3technicalreport,
+      title={Qwen3 Technical Report}, 
+      author={Qwen Team},
+      year={2025},
+      eprint={2505.09388},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2505.09388}, 
+}
+
+% ------------------------------------------------------------
+% Ranking-agreement and inter-rater agreement metrics
+% ------------------------------------------------------------
+
+@article{kendall1938new,
+  title   = {A New Measure of Rank Correlation},
+  author  = {Kendall, Maurice G.},
+  journal = {Biometrika},
+  volume  = {30},
+  number  = {1/2},
+  pages   = {81--93},
+  year    = {1938}
+}
+
+@article{spearman1904proof,
+  title   = {The Proof and Measurement of Association between Two Things},
+  author  = {Spearman, Charles},
+  journal = {The American Journal of Psychology},
+  volume  = {15},
+  number  = {1},
+  pages   = {72--101},
+  year    = {1904}
+}
+
+@article{fleiss1971measuring,
+  title   = {Measuring Nominal Scale Agreement among Many Raters},
+  author  = {Fleiss, Joseph L.},
+  journal = {Psychological Bulletin},
+  volume  = {76},
+  number  = {5},
+  pages   = {378--382},
+  year    = {1971}
+}
+
+@article{cohen1960coefficient,
+  title   = {A Coefficient of Agreement for Nominal Scales},
+  author  = {Cohen, Jacob},
+  journal = {Educational and Psychological Measurement},
+  volume  = {20},
+  number  = {1},
+  pages   = {37--46},
+  year    = {1960}
+}
+
+@book{krippendorff2004content,
+  title     = {Content Analysis: An Introduction to Its Methodology},
+  author    = {Krippendorff, Klaus},
+  edition   = {2nd},
+  publisher = {Sage Publications},
+  year      = {2004}
+}
+
+@inproceedings{khawaja2026gipplab,
+  title    = {{GippLab} at {CheckThat!} 2026: Multilingual Numerical Claim Verification with {QLoRA} Trace Scoring},
+  author   = {Khawaja, Ahmad Raza and Lehavi, Adam Moshe},
+  crossref = {clef2026-workingnotes}
+}
+
+
+@inproceedings{vaswani2017attention,
+  title     = {Attention is All you Need},
+  author    = {Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N. and Kaiser, {\L}ukasz and Polosukhin, Illia},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  volume    = {30},
+  year      = {2017},
+  url       = {https://arxiv.org/abs/1706.03762}
+}
+
+@inproceedings{sennrich2016bpe,
+  title     = {Neural Machine Translation of Rare Words with Subword Units},
+  author    = {Sennrich, Rico and Haddow, Barry and Birch, Alexandra},
+  booktitle = {Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  pages     = {1715--1725},
+  year      = {2016},
+  address   = {Berlin, Germany},
+  publisher = {Association for Computational Linguistics},
+  doi       = {10.18653/v1/P16-1162},
+  url       = {https://arxiv.org/abs/1508.07909}
+}

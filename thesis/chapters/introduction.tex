@@ -1,12 +1,8 @@
 % ============================================================
 % Thesis — Introduction
-% Required preamble packages (add to your main .tex if not present):
-%   \usepackage{tikz}
-%   \usetikzlibrary{positioning, arrows.meta, decorations.pathreplacing}
-%   \usepackage{amsmath, amssymb}
-%   \usepackage{hyperref}
-% Citation keys below are placeholders — map them to your .bib entries.
-% \section can be promoted to \chapter if your thesis template uses chapters.
+% Requires in the preamble: tikz with the positioning, arrows.meta and
+% decorations.pathreplacing libraries (loaded in 00_main.tex), plus
+% amsmath. All citation keys resolve against mainbib.bib.
 % ============================================================
 
 \section{Introduction}
@@ -15,181 +11,175 @@
 \subsection{Motivation}
 \label{sec:motivation}
 
-Numerical claims are pervasive in political discourse, news reporting, and social
-media. They typically involve quantities, dates, percentages, rankings, or
-comparisons, and small shifts in scope or numerical interpretation can change a
-claim's veracity entirely. This makes numerical claim verification considerably
-more demanding than standard textual entailment, because a system must reason
-jointly over linguistic context and quantitative relationships rather than over
-surface semantics alone~\cite{mishra2022numglue, rahman2025fragile}. The
-challenge is amplified in multilingual settings, where the same quantitative
-assertion may appear in several languages and where a reliable verifier must
-preserve numerical meaning across them~\cite{huang2024multilingual}.
+Numerical claims are pervasive in political discourse, news reporting, and social media. They
+typically involve quantities, dates, percentages, rankings, or comparisons, and small shifts in scope
+or numerical interpretation can change a claim's veracity entirely. This makes numerical claim
+verification considerably more demanding than standard textual entailment, because a system must
+reason jointly over linguistic context and quantitative relationships rather than over surface
+semantics alone~\cite{mishra2022numgluesuitefundamentalchallenging,rahman2025fragilenumbersenseprobing}.
+The challenge is amplified in multilingual settings, where the same quantitative assertion may appear
+in several languages and where a reliable verifier must preserve numerical meaning across
+them~\cite{huang2024survey}.
 
-Large language models (LLMs) have recently emerged as strong tools for the
-reasoning and ranking components of automated fact-checking, and have been used
-both as rankers of candidate evidence and as judges of reasoning
-quality~\cite{sahitaj2025automated, qin2024pairwise}. However, a growing body of
-work shows that their judgments are not language-invariant: semantically
-equivalent inputs may receive different rankings or verdicts depending solely on
-the language in which they are expressed~\cite{fu2025reliable}. Prompting-based
-rankers additionally suffer from systematic biases such as position and verbosity
-bias, which further destabilise their outputs~\cite{shi2025judging}. These
-observations sit in tension with evidence that LLMs encode partly
-language-independent internal representations~\cite{stolle2026reasoning}, raising
-the question of why such latent consistency does not translate into consistent
-external behaviour.
+Large language models (LLMs) have become the standard tool for the reasoning and ranking components of
+automated fact-checking, used both as rankers of candidate evidence and as judges of reasoning
+quality~\cite{sahitaj2025automatedfactcheckingrealworldclaims,qin2024largelanguagemodelseffective}.
+A growing body of work shows, however, that their judgments are not language-invariant: semantically
+equivalent inputs may receive different rankings or verdicts depending solely on the language in which
+they are expressed~\cite{fu2025reliablemultilingualllmasajudge}. Prompting-based rankers additionally
+suffer from systematic presentation biases such as position and verbosity bias, which destabilise
+their outputs further~\cite{shi2025judgingjudgessystematicstudy}. These observations sit in tension
+with evidence that multilingual LLMs encode partly language-independent internal
+representations~\cite{wendler2024llamasworkenglishlatent,STOLLE2026100250}, raising the question of
+why such latent consistency does not translate into consistent external behaviour.
 
-This tension motivates the central concern of this thesis. If a model can be
-encouraged to produce consistent judgments across languages, does that consistency
-reflect genuinely more robust reasoning, or merely more stable surface behaviour
-without any underlying gain in quality? In other words, is language invariance a
-useful \emph{objective} to optimise for, or only a property worth measuring?
+This tension motivates the central concern of the thesis. If a model can be encouraged to produce
+consistent judgments across languages, does that consistency reflect genuinely more robust reasoning,
+or merely more stable surface behaviour with no underlying gain in quality? Put differently: is
+language invariance a useful \emph{objective} to optimise for, or only a property worth measuring?
 
 \subsection{Problem Statement and Research Gap}
 \label{sec:problem}
 
-Two strands of recent work bear directly on this question but have not been
-studied together. First, preference optimisation methods such as Direct
-Preference Optimization (DPO) have been shown to improve the quality of
-LLM-based evaluation by aligning model outputs with preferred
-judgments~\cite{rafailov2023dpo}. Yet their effect on the \emph{cross-lingual
-consistency} of those judgments is not well understood: it remains unclear
-whether optimising preferences---whether on English-only or on genuinely
-multilingual data---makes a model more invariant across languages, or simply
-better in the language it was tuned on. Second, because numerical magnitude is
-not explicitly encoded by standard subword tokenisation, LLMs frequently
-struggle to reason reliably about quantities~\cite{rahman2025numberland}.
-Value-aware numerical representations have been proposed to address this
-limitation~\cite{dutulescu2026value}, and numerical reasoning is itself an
-attractive probe for genuine understanding because it grounds evaluation in
-objective quantities that are invariant across language and
-phrasing~\cite{lewkowycz2022solving}. However, whether such representations
-improve cross-lingual robustness, rather than only monolingual numerical
-accuracy, is an open question.
+The question is sharpened by an observation from the consistency literature that is easy to overlook.
+Consistency is formally \emph{decoupled} from
+correctness~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}: a model can be
+consistently wrong, agreeing with itself across languages on an incorrect answer, or accurate on
+average while contradicting itself across translations. Cross-lingual agreement therefore certifies
+nothing on its own, and any claim that invariance is beneficial has to be demonstrated against task
+quality measured independently---not inferred from the agreement statistics themselves.
 
-There is therefore a lack of systematic understanding of how preference
-optimisation and improved numerical representations interact with language
-invariance in multilingual numerical fact-checking. This thesis addresses that
-gap directly, treating language invariance not only as a property to be measured
-but as an explicit target that training objectives and input representations can
-be designed to promote.
+Against that backdrop, two strands of recent work bear on the question but have not been brought
+together. First, objectives that target cross-lingual consistency directly---consistency
+regularisation, cross-lingual self-alignment, and preference optimisation adapted to parallel
+prompts~\cite{zheng2021consistencyregularizationcrosslingualfinetuning,wang2025calmunleashingcrosslingualselfaligning,liu2026posttraininglanguagemodelscrosslingual}---show
+that invariance can be optimised rather than merely observed. These methods are evaluated on factual
+question answering or general benchmarks, however, not on ranking quality in a downstream task, so
+whether optimising for invariance \emph{improves the task} remains open. Second, because numerical
+magnitude is not explicitly encoded by standard subword tokenisation, LLMs reason unreliably about
+quantities~\cite{rahman2025largelanguagemodelsnumberland,wallace2019nlpmodelsknownumbers}, and the
+numeral \emph{script} itself is an independent axis of cross-lingual variation: the same quantity
+written in Arabic-Indic digits tokenises differently and is handled measurably
+worse~\cite{reddy2026effectscriptsformatsllm}. Value-aware numerical representations have been
+proposed to address this~\cite{dutulescu2026valueawarenumericalrepresentationstransformer}, but
+whether they improve cross-lingual robustness rather than only monolingual numeracy is unestablished.
+
+There is therefore no systematic account of how a language-invariance objective, and improved
+numerical representations, interact in multilingual numerical fact-checking. This thesis addresses
+that gap directly, treating language invariance not only as a property to be measured but as an
+explicit target that a training objective can be designed to promote---and then asking, with accuracy
+and consistency measured separately, what optimising for it actually buys.
 
 \subsection{Grounding: CLEF CheckThat! 2026 Task 2}
 \label{sec:grounding}
 
-We study these questions in the concrete setting of CLEF CheckThat! 2026
-Task~2 on multilingual numerical claim verification~\cite{vlachos2026checkthat}.
-The task adopts a test-time scaling formulation for fact
-verification~\cite{chungkham2025think}: for each claim and its retrieved
-evidence, multiple reasoning traces are generated by an LLM under varying
-temperatures to induce diverse reasoning paths, redundant traces are removed,
-and the participant must train a verifier that ranks the remaining traces by
-their utility for reaching the correct verdict and then derives a final
-claim-level verdict from the top-ranked traces. The claims are drawn from the
-QuanTemp benchmark together with Spanish and Arabic claims from the previous
-CLEF edition, and are provided in English, Spanish, and
-Arabic~\cite{v2024quantemp}. Ranking quality is measured with Recall@5 and
-MRR@5 over traces whose verdict matches the gold label, while claim-verdict
-prediction is evaluated with macro-averaged F1; the final per-language score is
-the average of Recall@5 and macro-F1.
+We study these questions in the concrete setting of CLEF~CheckThat!~2026 Task~2 on multilingual
+numerical claim verification~\cite{clef-checkthat:2026:task2}. The task adopts a test-time scaling
+formulation for fact verification~\cite{chungkham2025thinkrightmoretesttime}: for each claim and its
+retrieved evidence, multiple reasoning traces are generated by an LLM under varying temperatures to
+induce diverse reasoning paths, redundant traces are removed, and participants must train a verifier
+that ranks the remaining traces by their utility for reaching the correct verdict and then derives a
+claim-level verdict from the top-ranked traces. The English claims come from the QuanTemp
+benchmark~\cite{v2024quantemprealworldopendomainbenchmark}, together with Spanish and Arabic claims
+from the previous CLEF edition. Ranking quality is measured with Recall@5 and MRR@5 over traces whose
+verdict matches the gold label, claim-verdict prediction with macro-averaged F1, and the per-language
+score is the mean of the two.
 
-The thesis builds on our own participation in this shared task. Our submitted
-system fine-tunes \texttt{Llama-3.1-8B-Instruct} with Quantized Low-Rank
-Adaptation (QLoRA)~\cite{dettmers2023qlora, meta2024llama, hu2021lora} as a
-multilingual supervised trace scorer that scores each claim--trace pair
-independently and ranks traces by their predicted relevance. This formulation
-proved more controllable than generative ranking and ranked first on English and
-third on Spanish on the official leaderboard, providing a competitive baseline
-and an established experimental pipeline on which the present work extends.
+This setting suits the research question for three reasons. It is genuinely multilingual and evaluated
+per language, so cross-lingual behaviour is directly observable. Its intermediate structure---an
+explicit ranking over reasoning traces---exposes not just \emph{what} a system concludes but
+\emph{which evidence} it relied on, which turns out to be where the interesting cross-lingual effects
+live. And because the claims are numerical, correctness is grounded in quantities that are invariant
+across language and phrasing~\cite{lewkowycz2022solvingquantitativereasoningproblems}, making
+inconsistency attributable to the model rather than to genuine semantic drift between translations.
+
+The thesis builds on our own participation in the shared task~\cite{khawaja2026gipplab}. That system
+fine-tunes Llama-3.1-8B-Instruct~\cite{llama31instruct} with Quantized Low-Rank
+Adaptation~\cite{dettmers2023qloraefficientfinetuningquantized,hu2021loralowrankadaptationlarge} as a
+multilingual supervised trace scorer, scoring each claim--trace pair independently and ranking traces
+by predicted relevance. This formulation proved more controllable than generative ranking and ranked
+first on English and third on Spanish on the official leaderboard, providing a competitive baseline
+and an established pipeline on which the present work builds.
 
 \begin{figure}[t]
 \centering
+% The diagram is naturally wider than \textwidth; scale it to the text block
+% so its edges line up with the surrounding paragraphs.
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
     >=Stealth,
     font=\small,
-    claimbox/.style={draw, rounded corners, fill=blue!8, minimum width=2.5cm,
+    claimbox/.style={draw, rounded corners, fill=blue!8, minimum width=2.2cm,
         minimum height=1.0cm, align=center},
-    langbox/.style={draw, rounded corners, fill=gray!10, minimum width=2.1cm,
+    langbox/.style={draw, rounded corners, fill=gray!10, minimum width=1.9cm,
         minimum height=0.8cm, align=center},
-    modelbox/.style={draw, rounded corners, fill=orange!15, minimum width=2.4cm,
+    modelbox/.style={draw, rounded corners, fill=orange!15, minimum width=2.2cm,
         minimum height=1.7cm, align=center},
-    outbox/.style={draw, rounded corners, fill=green!10, minimum width=2.9cm,
+    outbox/.style={draw, rounded corners, fill=green!10, minimum width=2.5cm,
         minimum height=0.8cm, align=center},
     note/.style={align=center, font=\footnotesize\itshape}
 ]
-% claim
 \node[claimbox] (claim) {Numerical\\ claim $c$\\ (+ evidence)};
-% language versions
-\node[langbox, right=1.3cm of claim, yshift=1.4cm]  (en) {English $c_{\mathrm{en}}$};
-\node[langbox, right=1.3cm of claim]                (es) {Spanish $c_{\mathrm{es}}$};
-\node[langbox, right=1.3cm of claim, yshift=-1.4cm] (ar) {Arabic $c_{\mathrm{ar}}$};
-% model
-\node[modelbox, right=1.3cm of es] (model) {LLM\\ trace scorer\\ $f_\theta$};
-% outputs
-\node[outbox, right=1.3cm of model, yshift=1.4cm]  (oen) {$r_{\mathrm{en}}$, $\hat{y}_{\mathrm{en}}$};
-\node[outbox, right=1.3cm of model]                (oes) {$r_{\mathrm{es}}$, $\hat{y}_{\mathrm{es}}$};
-\node[outbox, right=1.3cm of model, yshift=-1.4cm] (oar) {$r_{\mathrm{ar}}$, $\hat{y}_{\mathrm{ar}}$};
-% arrows in
+\node[langbox, right=0.9cm of claim, yshift=1.4cm]  (en) {English $c_{\mathrm{en}}$};
+\node[langbox, right=0.9cm of claim]                (es) {Spanish $c_{\mathrm{es}}$};
+\node[langbox, right=0.9cm of claim, yshift=-1.4cm] (ar) {Arabic $c_{\mathrm{ar}}$};
+\node[modelbox, right=0.9cm of es] (model) {LLM\\ trace scorer\\ $f_\theta$};
+\node[outbox, right=0.9cm of model, yshift=1.4cm]  (oen) {$r_{\mathrm{en}}$, $\hat{y}_{\mathrm{en}}$};
+\node[outbox, right=0.9cm of model]                (oes) {$r_{\mathrm{es}}$, $\hat{y}_{\mathrm{es}}$};
+\node[outbox, right=0.9cm of model, yshift=-1.4cm] (oar) {$r_{\mathrm{ar}}$, $\hat{y}_{\mathrm{ar}}$};
 \draw[->] (claim) -- (en);
 \draw[->] (claim) -- (es);
 \draw[->] (claim) -- (ar);
 \draw[->] (en) -- (model);
 \draw[->] (es) -- (model);
 \draw[->] (ar) -- (model);
-% arrows out
 \draw[->] (model) -- (oen);
 \draw[->] (model) -- (oes);
 \draw[->] (model) -- (oar);
-% brace + note
 \draw[decorate, decoration={brace, amplitude=6pt}]
     (oen.north east) -- (oar.south east);
-\node[note, right=0.75cm of oes, text width=3.1cm] {%
+\node[note, right=0.5cm of oes, text width=2.7cm] {%
     \textbf{Invariance:} an ideal model yields consistent rankings $r$ and
     verdicts $\hat{y}$ across all three language versions of $c$};
-\end{tikzpicture}
-\caption{The language-invariance problem in multilingual numerical
-fact-checking. The same numerical claim $c$ and its evidence are presented to the
-trace scorer $f_\theta$ in three languages. A language-variant model may produce
-divergent rankings $r$ and verdicts $\hat{y}$ for semantically equivalent inputs,
-whereas a language-invariant model should produce consistent outputs. This thesis
-asks whether explicitly optimising for such invariance improves ranking and
-reasoning quality.}
-\label{fig:language-invariance}
+\end{tikzpicture}%
+}
+\caption{The language-invariance problem in multilingual numerical fact-checking. The same numerical
+claim $c$ and its evidence are presented to the trace scorer $f_\theta$ in three languages. A
+language-variant model may produce divergent rankings $r$ and verdicts $\hat{y}$ for semantically
+equivalent inputs, whereas a language-invariant model should produce consistent outputs. This thesis
+asks whether explicitly optimising for such invariance improves ranking and reasoning quality.}
+\label{fig:intro-language-invariance}
 \end{figure}
 
-Figure~\ref{fig:language-invariance} illustrates the core problem. The same
-claim, together with its evidence and candidate reasoning traces, is presented to
-the trace scorer in English, Spanish, and Arabic. A language-variant model can
-return divergent rankings and verdicts for these semantically equivalent inputs,
-whereas a language-invariant model should return consistent ones. Quantifying and
-reducing this divergence---and determining whether reducing it also improves
-ranking quality---is the empirical heart of this thesis.
+Figure~\ref{fig:intro-language-invariance} illustrates the core problem. The same claim, together with
+its evidence and candidate reasoning traces, is presented to the trace scorer in English, Spanish, and
+Arabic. A language-variant model can return divergent rankings and verdicts for these semantically
+equivalent inputs, whereas a language-invariant model should return consistent ones. Quantifying and
+reducing this divergence---and determining whether reducing it also improves ranking
+quality---is the empirical heart of this thesis.
 
 \subsection{Research Questions}
 \label{sec:rqs}
 
-Guided by the gap described above, this thesis investigates the relationship
-between language invariance and reasoning quality in multilingual numerical
-fact-checking through three research questions:
+Guided by the gap described above, this thesis investigates the relationship between language
+invariance and reasoning quality in multilingual numerical fact-checking through three research
+questions:
 
 \begin{itemize}
-    \item[\textbf{RQ1}] Does optimising for language-invariant reasoning improve
-    ranking performance in multilingual numerical fact-checking?
-    \item[\textbf{RQ2}] What is the relationship between language invariance and
-    reasoning quality across different languages?
-    \item[\textbf{RQ3}] Can language-invariant training objectives lead to more
-    robust multilingual reasoning models?
+    \item[\textbf{RQ1}] Does optimising for language-invariant reasoning improve ranking performance
+    in multilingual numerical fact-checking?
+    \item[\textbf{RQ2}] What is the relationship between language invariance and reasoning quality
+    across different languages?
+    \item[\textbf{RQ3}] Can language-invariant training objectives lead to more robust multilingual
+    reasoning models?
 \end{itemize}
 
 \noindent
-Cutting across these questions is a methodological sub-thread on
-representation: namely, to what extent value-aware numerical representations,
-which expose quantitative magnitude more explicitly than ordinary subword
-tokenisation, contribute to cross-lingual robustness in numerically grounded
-reasoning. We treat this as a lens on RQ2 and RQ3 rather than as a separate
-question, since numerical grounding is precisely where language invariance is
-most testable.
+Cutting across these questions is a methodological sub-thread on representation: to what extent
+value-aware numerical representations, which expose quantitative magnitude more explicitly than
+ordinary subword tokenisation, contribute to cross-lingual robustness in numerically grounded
+reasoning. We treat this as a lens on RQ2 and RQ3 rather than as a separate question, since numerical
+grounding is precisely where language invariance is most testable.
 
 \subsection{Contributions}
 \label{sec:contributions}
@@ -197,38 +187,55 @@ most testable.
 In addressing these questions, this thesis makes the following contributions:
 
 \begin{enumerate}
-    \item It frames language invariance as an explicit training objective---rather
-    than only an evaluation criterion---for multilingual numerical claim
-    verification, and operationalises it on a competitive trace-scoring pipeline
-    derived from our CLEF CheckThat! 2026 Task~2 system.
-    \item It provides a systematic comparison of ranking formulations through the
-    lens of cross-lingual consistency, spanning prompting-based ranking, Direct
-    Preference Optimization under English-only and multilingual preference data,
-    and supervised trace scoring.
-    \item It investigates whether value-aware numerical representations improve
-    cross-lingual robustness, isolating the effect of explicit numerical encoding
-    from that of multilingual training.
-    \item It evaluates these settings on parallel English, Spanish, and Arabic
-    data using both the standard shared-task metrics (Recall@5, MRR@5, and
-    macro-F1) and direct measures of cross-lingual agreement between model
-    judgments on semantically equivalent inputs.
+    \item It formulates language invariance as an explicit, differentiable \emph{training objective}
+    rather than only an evaluation criterion, defined at the level of per-trace relevance scores: the
+    objective penalises a model when the normalised score profiles it assigns to the same reasoning
+    traces diverge across languages. It operationalises this on a competitive trace-scoring pipeline
+    derived from our CLEF~CheckThat!~2026 Task~2 system.
+    \item It provides a systematic comparison of ranking formulations through the lens of
+    cross-lingual consistency, spanning zero-shot listwise and pairwise prompted ranking, Direct
+    Preference Optimization~\cite{rafailov2024directpreferenceoptimizationlanguage}, and supervised
+    trace scoring, and shows why a pointwise scorer is the formulation that makes invariance
+    optimisable at all.
+    \item It contributes an evaluation protocol that reports task quality and cross-lingual agreement
+    \emph{independently}, and at two levels---the final verdict and the underlying trace
+    ranking---and demonstrates that these two levels give substantially different answers.
+    \item It reports an empirical study over three open-weight backbones and $28$ non-degenerate
+    configurations, evaluated on a held-out trilingual test set of $4{,}233$ parallel claims with
+    three seeds per configuration, including the interaction between the invariance objective and
+    value-aware numerical representations.
 \end{enumerate}
+
+\paragraph{Summary of findings.}
+The headline result is a separation rather than an improvement. Optimising for language invariance
+leaves the official ranking metric essentially unchanged---Recall@5 is statistically indistinguishable
+from standard multilingual fine-tuning, and both sit near the metric's attainable ceiling---while
+improving the cross-lingual \emph{stability} of the ranking roughly fourfold, with the
+invariance-trained and non-invariance populations not overlapping at all on that measure. A modest
+gain in verdict quality accompanies it, concentrated in Arabic and specifically in the minority
+\textsf{Conflicting} class. Two secondary findings support the case: verdict-level agreement is high
+for every system we evaluated and therefore fails to discriminate between them, so a protocol that
+measures consistency only over final answers would have found nothing; and a trivially invariant
+random baseline scores perfectly on every agreement measure while being useless, which is the sharpest
+possible demonstration that consistency must be reported alongside, never instead of, task quality.
 
 \subsection{Thesis Outline}
 \label{sec:outline}
 
 The remainder of this thesis is organised as follows.
-\textbf{Chapter~2} reviews related work on LLM-based ranking and
-fact-checking, language invariance and multilingual evaluation, preference
-optimisation, and numerical reasoning, situating our contributions within each.
-\textbf{Chapter~3} describes the CLEF CheckThat! 2026 Task~2 setting, the
-multilingual datasets, and the evaluation metrics, including the construction of
-the parallel English, Spanish, and Arabic data used for our invariance
-experiments.
-\textbf{Chapter~4} presents the methodology, covering the trace-scoring
-baseline, the preference-optimisation and language-invariant training objectives,
-and the value-aware numerical representations.
-\textbf{Chapter~5} reports the experimental setup and results across the three
-languages.
-\textbf{Chapter~6} discusses the findings in relation to the research questions,
-and \textbf{Chapter~7} concludes and outlines directions for future work.
+\textbf{Section~\ref{sec:related-work}} reviews related work on LLM-based ranking and its presentation
+biases, automated and multilingual fact-checking, language invariance and cross-lingual consistency,
+cross-lingual representations, numerical reasoning across languages, and the preference-optimisation
+and parameter-efficient fine-tuning methods on which the training objectives build.
+\textbf{Section~\ref{sec:background}} introduces the concepts and terminology the rest of the thesis
+assumes, for readers unfamiliar with language models, ranking formulations, fact-checking pipelines,
+or the agreement statistics used to quantify consistency.
+\textbf{Section~\ref{sec:methodology}} presents the methodology: the task formulation and data,
+the trace-scoring architecture and its training objective, the score-level language-invariance
+objective, the value-aware numerical components, the baselines, and the evaluation protocol.
+\textbf{Section~\ref{sec:results}} reports and discusses the results, presenting task performance and
+cross-lingual consistency separately before combining them to answer the research questions, and
+states the threats to validity.
+\textbf{Section~\ref{sec:conclusion}} synthesises the findings, revisits the contributions, and
+outlines directions for future work.
+Full per-model results are provided in Appendix~\ref{app:results-full}.

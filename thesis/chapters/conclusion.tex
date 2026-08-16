@@ -1,0 +1,164 @@
+% ============================================================
+% Conclusion
+% Synthesises the findings reported in chapters/results.tex against
+% the research questions stated in the introduction. Deliberately
+% avoids restating the full statistics, which belong to Section
+% \ref{subsec:res-summary}; this chapter argues what they mean.
+% ============================================================
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+This thesis asked whether language invariance is a useful \emph{objective} for multilingual reasoning,
+rather than only a property worth measuring. The setting was multilingual numerical claim verification
+as posed by CLEF~CheckThat!~2026 Task~2~\cite{clef-checkthat:2026:task2}: given a numerical claim, its
+evidence, and a set of candidate reasoning traces, a system must rank the traces by usefulness and
+derive a claim-level verdict, in English, Spanish, and Arabic. Starting from the supervised trace
+scorer developed for our shared-task submission~\cite{khawaja2026gipplab}, we added a score-level
+language-invariance objective that penalizes a model when it assigns different relevance profiles to
+the same reasoning traces across languages, and an evaluation protocol that measures cross-lingual
+consistency separately from task accuracy. Across $28$ non-degenerate configurations spanning three
+open-weight backbones, evaluated on a held-out trilingual test set of $4{,}233$ parallel claims, the
+answer is affirmative but narrower and more specific than the question invites.
+
+\subsection{Answers to the Research Questions}
+\label{subsec:concl-rqs}
+
+\paragraph{RQ1: Does optimizing for language-invariant reasoning improve ranking performance?}
+Not in the sense of retrieving better evidence, but decisively in the sense of retrieving the
+\emph{same} evidence across languages. On Recall@5, the official ranking metric, invariance training
+is indistinguishable from standard multilingual fine-tuning; the best Recall@5 in the study belongs to
+a standard fine-tune, and both approaches sit at roughly $90\%$ of the metric's attainable ceiling.
+What the objective changes is the stability of the ordering: cross-lingual rank agreement between
+English and Arabic rises roughly fourfold, and the invariance-trained and non-invariance populations
+do not overlap at all on this measure. A modest gain in verdict quality comes with it. The correct
+claim is therefore about robustness rather than about ranking accuracy, and
+Section~\ref{subsec:res-invariance} states it in those terms.
+
+This is a less dramatic answer than ``the objective makes the ranker better,'' but it is the more
+useful one. The ranking component of this task is close to saturated: with $13.7\%$ of claims having
+no gold-matching trace at all, further Recall@5 gains must come from generating or retrieving better
+candidate traces, not from ranking the existing ones more cleverly. Against that ceiling, an
+intervention that leaves retrieval unchanged while making it reproducible across languages is
+addressing the dimension that still has headroom.
+
+\paragraph{RQ2: What is the relationship between language invariance and reasoning quality?}
+Positive, moderate, and---importantly---not strong enough to treat either property as a proxy for the
+other. Verdict quality correlates with cross-lingual rank agreement at $r = 0.60$, but at essentially
+fixed verdict quality the observed agreement still spans more than half the range of Kendall's $\tau$.
+The ranking metric is a weaker predictor still. Two observations from this thesis sharpen the point
+beyond a correlation coefficient. First, the random-ranking baseline is \emph{perfectly}
+language-invariant by construction and simultaneously useless, which shows that consistency alone
+certifies nothing. Second, and less obviously, every system we evaluated---including the weakest---
+achieves high verdict agreement across languages, while rank agreement varies by almost an order of
+magnitude. Models routinely reach the same verdict in all three languages by way of largely disjoint
+evidence.
+
+That asymmetry has a methodological consequence that we consider one of the more transferable results
+of this work: had we followed the common practice of measuring cross-lingual consistency only over
+final answers, we would have concluded that all our systems were already language-invariant, and the
+effect this thesis reports would have been invisible. Agreement statistics computed over discrete
+outputs are a necessary but badly insufficient instrument, and they should be paired with
+agreement over the intermediate structure a system produces---here, the trace ranking---wherever that
+structure exists. This concretely extends, to a ranking setting, the accuracy/consistency decoupling
+established for factual prediction~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}.
+
+\paragraph{RQ3: Can language-invariant training objectives lead to more robust multilingual reasoning
+models?} Yes, and the gains land where the multilingual difficulty actually is. Spanish behaves almost
+identically to English for every system, so the cross-lingual problem in this task is essentially an
+Arabic problem---consistent with the expectation that a different numeral script and weaker
+pre-training representation would make Arabic the hard case~\cite{reddy2026effectscriptsformatsllm}.
+Within Arabic, the damage is concentrated in the minority \textsf{Conflicting} class, the label that
+requires genuinely weighing contradictory quantitative evidence rather than matching a single number;
+this is where standard fine-tuning degrades sharply and invariance training holds. The effect appears
+on both the Llama and Qwen backbones, which argues that it is a property of the objective rather than
+of one model family, and it was obtained under a \emph{reduced} training-context budget, making the
+comparison conservative.
+
+The value-aware numerical components, carried over from the shared-task system, did not add to this.
+Within the invariance-trained group, combining plain-text numeric normalization with the invariance
+objective cost cross-lingual stability and bought no accuracy, although normalization remained mildly
+positive for standard fine-tunes. The most plausible reading is redundancy rather than harm: both
+mechanisms attack the same underlying problem---that the same quantity is represented differently
+across scripts---and once the score-level constraint is imposed, restating canonical values in the
+input adds length without adding signal. On this evidence the two should not be combined, which is a
+useful negative result for the sub-thread on numerical representation.
+
+\subsection{Contributions Revisited}
+\label{subsec:concl-contrib}
+
+Against the contributions claimed in Section~\ref{sec:contributions}, this thesis delivers the
+following. It formulates language invariance as a differentiable training objective on a competitive
+trace-scoring pipeline, defined at the level of per-trace scores rather than discrete outputs, and
+shows that this formulation is what makes the property optimizable at all: a scorer exposes a
+continuous quantity that can be aligned across languages, whereas generative rankers expose only an
+ordering that must first be reconciled. It supplies a systematic comparison of ranking formulations
+under a consistency lens, establishing that prompted listwise and pairwise ranking and
+preference-based ranking all inherit order sensitivity that supervised trace scoring avoids. It tests
+value-aware numerical representations in combination with the invariance objective and reports the
+negative interaction described above. Finally, it contributes an evaluation protocol that reports task
+metrics and cross-lingual agreement independently, at both the verdict and the ranking level, and
+demonstrates concretely why the ranking level is the one that discriminates.
+
+We also record two smaller findings that were not anticipated. The first is the metric-redundancy
+result: across configurations, Recall@5, Precision@5, MRR@5, macro-F1, and the majority-class F1
+scores are nearly collinear, so the shared task's headline numbers largely restate a single ordering
+of systems, and the minority \textsf{Conflicting} class is what actually separates them. The second is
+the diagnostic value of a trivially invariant baseline: including a seeded random ranker, which is
+invariant by construction, provides a floor that any consistency claim must clear and makes the
+independence of consistency from quality immediately legible.
+
+\subsection{Limitations}
+\label{subsec:concl-limits}
+
+The threats to validity are stated in full in Section~\ref{subsec:res-threats}; two of them bound
+the conclusions above and are worth restating plainly. The invariance-trained models were trained
+under a smaller context budget than several of the standard fine-tunes, so training condition and
+context budget are partially entangled. The direction of that confound is conservative---the
+handicapped arm is the one that wins---and the measured effect of extra context is small and not even
+consistent in sign across languages, but the comparison is observational rather than a controlled
+ablation. Second, and most fundamentally, all our invariance measures are behavioural. We show that the
+objective changes what a model \emph{does} across languages; we do not show that it changes how the
+model represents the underlying content, and behavioural agreement is known not to entail shared
+internal representation~\cite{ifergan2024beneathsurfaceconsistencyexploring}. We are also careful not
+to claim a uniform win: on Spanish macro-F1 the best short-context standard fine-tune outperforms
+every invariance-trained configuration, and the aggregate Arabic gap, while consistent in direction,
+does not reach statistical significance on its own.
+
+\subsection{Future Work}
+\label{subsec:concl-future}
+
+Several directions follow directly. The single most valuable next experiment is also the cheapest:
+running one invariance-trained configuration at the full context budget would resolve the confound
+described above, and a single seed would suffice as a sanity check. Beyond that, extending the
+language set to additional scripts and typological families would test whether the effect generalizes
+or is specific to the Arabic case.
+
+A second direction concerns mechanism. Because our evidence is behavioural, pairing the objective with
+representational analysis---probing or representational-similarity methods applied to the trace scorer's
+hidden states~\cite{wendler2024llamasworkenglishlatent,STOLLE2026100250}---would test whether
+score-level alignment actually pulls the internal representations of parallel inputs together, or
+whether it merely constrains the output layer. That distinction matters for the claim that invariance
+functions as an inductive bias rather than as a surface constraint.
+
+A third direction targets the ceiling. Since ranking is nearly saturated on this candidate set, the
+natural complement to this work is on the generation side: producing candidate reasoning traces with
+better coverage of the gold verdict, so that a well-behaved ranker has something to find. The $13.7\%$
+of claims with no gold-matching trace place a hard cap on Recall@5 that no verifier can lift.
+Relatedly, the score-level invariance objective is not specific to fact-checking---it applies wherever
+a model assigns comparable scores to parallel items---so testing it on other multilingual ranking and
+reranking tasks would establish how far the result travels.
+
+\subsection{Closing Remarks}
+\label{subsec:concl-closing}
+
+The clearest way to state what this thesis found is to separate two things that are easily conflated.
+Standard multilingual fine-tuning already produces models that reach the same verdict in every
+language; what it does not produce is models that reach it for the same reasons. Training explicitly
+for language invariance does not make the underlying ranker better at finding relevant evidence, and
+on the official ranking metric it changes nothing measurable. What it does is make the evidence a
+model relies on transfer across languages, so that a claim and its translation are not merely assigned
+the same label but are actually assessed the same way. In a fact-checking setting, where the
+justification is at least as consequential as the verdict, that is the property worth having---and,
+because it is invisible to the verdict-level agreement statistics ordinarily reported, it is a property
+that will keep going unmeasured until the evaluation protocol is changed to look for it.

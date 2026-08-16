@@ -1,13 +1,225 @@
-% Appendix: full per-model result tables. Input after \appendix in 00_main.tex.
+% Appendix. Input after \appendix in 00_main.tex.
+%   A  Full per-model results
+%   B  Prompt templates
+%   C  Technical information
+%   D  AI Usage Card   (must stay last)
+
+% start the appendix on a fresh page so the heading is not stranded
+% at the foot of the references
+\clearpage
 \section{Full Per-Model Results}
 \label{app:results-full}
 
 Tables~\ref{tab:results-main} and~\ref{tab:results-consistency} give the complete per-model figures
 condensed in Table~\ref{tab:results-summary}. All values are means over three random seeds on the
-aligned trilingual validation set of $4{,}233$ parallel claims. The four degenerate configurations
+aligned trilingual test set of $4{,}233$ parallel claims. The four degenerate configurations
 described in Section~\ref{subsec:res-setup} are omitted.
 
 \input{tables/table-results-main}
 
 \input{tables/table-results-consistency}
 
+% ===================================================================
+\clearpage
+\section{Prompt Templates}
+\label{app:prompts}
+
+This section reproduces the prompt templates used by the two generative ranking baselines
+(Section~\ref{subsec:method-baselines}) and the input template used by the supervised trace scorer
+(Section~\ref{subsec:method-scorer}). Braces denote fields substituted at run time. All prompted
+baselines additionally use the system message
+
+\begin{quote}\ttfamily\small
+You are a careful multilingual fact-checking assistant. Return strict JSON only.
+\end{quote}
+
+\noindent
+and are decoded greedily, so the only source of variation between runs is the input itself.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}p{0.95\linewidth}@{}}
+\toprule
+{\ttfamily\scriptsize
+You are ranking candidate reasoning traces for multilingual fact-checking.\newline
+Use the claim and the evidence snippets to judge which reasoning traces are most reliable.\newline
+Rank all candidate traces from best to worst. The input order is arbitrary and must not be copied unless it is truly the best ranking.\newline
+A better trace is one that is better supported by the evidence, checks the claim more directly, and reaches a more reliable verdict.\newline
+\newline
+There are \{num\_traces\} traces indexed 0 through \{num\_traces-1\}.\newline
+The ranked\_trace\_indices value must be a permutation containing each of these indices exactly once: [\{valid\_indices\}].\newline
+Do not omit indices. Do not repeat indices. Do not use placeholder indices.\newline
+Then predict the final verdict for the claim.\newline
+\newline
+Allowed verdict labels: \{allowed\_labels\}\newline
+\newline
+Return strict JSON only with this schema:\newline
+\{"ranked\_trace\_indices":[...],"predicted\_verdict":"\textless one allowed label\textgreater"\}\newline
+Do not include markdown. Do not include any explanation.\newline
+\newline
+Claim:\newline
+\{claim\}\newline
+\newline
+Evidence snippets:\newline
+[0] \{evidence\_0\} \ldots\newline
+\newline
+Candidate reasoning traces:\newline
+[0] \{trace\_0\} \ldots
+} \\
+\bottomrule
+\end{tabular}
+\vspace{6pt}
+\caption{Zero-shot \textbf{listwise} ranking prompt. The model receives all candidate traces at once
+and must return a complete permutation of trace indices together with a claim verdict. The explicit
+instruction not to copy the input order is included precisely because listwise rankers are prone to
+reproducing it (Section~\ref{subsec:res-task}).}
+\label{tab:prompt-listwise}
+
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}p{0.95\linewidth}@{}}
+\toprule
+{\ttfamily\scriptsize
+You are comparing two candidate reasoning traces for multilingual fact-checking.\newline
+Use the claim and evidence snippets to decide which trace is more reliable.\newline
+Choose exactly one trace: A or B.\newline
+\newline
+Return strict JSON only in this exact schema:\newline
+\{"preferred\_trace":"A"\}\newline
+Allowed values for preferred\_trace: A, B.\newline
+Do not include markdown. Do not include any explanation.\newline
+\newline
+Claim:\newline
+\{claim\}\newline
+\newline
+Evidence snippets:\newline
+[0] \{evidence\_0\} \ldots\newline
+\newline
+Trace A (original index \{left\_index\}):\newline
+\{left\_trace\}\newline
+\newline
+Trace B (original index \{right\_index\}):\newline
+\{right\_trace\}
+} \\
+\bottomrule
+\end{tabular}
+\vspace{6pt}
+\caption{Zero-shot \textbf{pairwise} ranking prompt. Each claim requires $n(n-1)/2$ calls in the
+balanced orientation and $n(n-1)$ in the bidirectional orientation; the ranking is assembled from the
+accumulated wins.}
+\label{tab:prompt-pairwise}
+
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}p{0.95\linewidth}@{}}
+\toprule
+{\ttfamily\scriptsize
+Claim: \{claim\}\newline
+Evidence snippets:\newline
+[0] \{evidence\_0\}\newline
+[1] \{evidence\_1\} \ldots\newline
+Normalized numbers:\hfill\textnormal{\itshape (optional)}\newline
+Claim: \{surface\}=\{canonical\}, \ldots\newline
+Evidence: \{surface\}=\{canonical\}, \ldots\newline
+Trace: \{surface\}=\{canonical\}, \ldots\newline
+Verdict: \{trace\_verdict\}\newline
+Justification: \{cleaned\_trace\}
+} \\
+\bottomrule
+\end{tabular}
+\vspace{6pt}
+\caption{Input template for the supervised \textbf{trace scorer}. Unlike the prompted baselines this
+is not an instruction: it is the sequence classified by the model, which emits a single relevance
+score per claim--trace pair. The trace justification is stripped of any restated verdict so that the
+scorer cannot read the label off the text, and the optional \texttt{Normalized numbers} block is
+present only in the numeric-normalization configurations
+(Section~\ref{subsec:method-numeric}).}
+\label{tab:prompt-scorer}
+
+\end{table}
+
+% ===================================================================
+\clearpage
+\section{Technical Information}
+\label{app:technical}
+
+All experiments were run on NVIDIA A100 GPUs on the institutional cluster, with distributed
+data-parallel training across two GPUs via \texttt{torchrun} for the main trace-scorer runs and a
+single GPU for inference and smaller ablations. Table~\ref{tab:technical} lists the software
+environment. Together with the code and configuration files in the project repository, these versions
+are intended to make the reported results reproducible: model behaviour under quantized fine-tuning is
+sensitive to the exact versions of \texttt{transformers}, \texttt{peft}, and \texttt{bitsandbytes} in
+particular.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Library & Version \\
+\midrule
+Python            & 3.12.8  \\
+CUDA              & 12.8    \\
+PyTorch           & 2.10.0  \\
+transformers      & 5.2.0   \\
+tokenizers        & 0.22.2  \\
+peft              & 0.18.1  \\
+accelerate        & 1.12.0  \\
+bitsandbytes      & 0.49.2  \\
+safetensors       & 0.7.0   \\
+huggingface\_hub  & 1.4.1   \\
+sentencepiece     & 0.2.1   \\
+NumPy             & 2.4.2   \\
+googletrans       & 4.0.2   \\
+tqdm              & 4.67.3  \\
+\bottomrule
+\end{tabular}
+\vspace{6pt}
+\caption{Software environment used for the experiments. Specifying exact versions supports
+reproducibility and independent validation of the reported results.}
+\label{tab:technical}
+
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Backbone & Parameters & Checkpoint \\
+\midrule
+Mistral-7B-Instruct-v0.3 & 7B & \texttt{mistralai/Mistral-7B-Instruct-v0.3} \\
+Llama-3.1-8B-Instruct    & 8B & \texttt{meta-llama/Llama-3.1-8B-Instruct}   \\
+Qwen3-8B                 & 8B & \texttt{Qwen/Qwen3-8B}                      \\
+\bottomrule
+\end{tabular}
+\vspace{6pt}
+\caption{Backbone models. All three are open-weight instruction-tuned checkpoints obtained from the
+Hugging Face Hub and adapted with QLoRA (Section~\ref{subsec:method-scorer}).}
+\label{tab:backbones}
+
+\end{table}
+
+% ===================================================================
+% The AI Usage Card must remain the final section. \clearpage comes *before*
+% the heading so the heading and the card land on the same page.
+\clearpage
+\section{AI Usage Card}
+\label{app:ai-usage}
+
+Generative AI use in preparing this thesis is documented below, following the AI Usage Card standard.
+
+% Compressed locally so the card fits on a single page: the package hard-codes
+% \footnotesize inside the box and separates sections with empty table rows, so
+% stepping the font down once and tightening \arraystretch is enough. The .sty
+% itself is left untouched.
+\begingroup
+\vspace{8pt}
+% give tcolorbox enough room to keep its footer strip on this page
+\enlargethispage{5\baselineskip}
+\let\footnotesize\scriptsize
+\renewcommand{\arraystretch}{0.72}
+\makeAIUsageCard
+\endgroup

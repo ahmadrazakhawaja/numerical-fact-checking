@@ -1,40 +1,41 @@
 \begin{table}[htbp]
-\centering\footnotesize\setlength{\tabcolsep}{4pt}
-\caption{Condensed results. For each training group we report the group mean over its $n$
-configurations, followed by its most accurate (acc.) and, where different, its most
-cross-lingually stable (stab.) member. Accuracy and consistency are shown together so the trade-off is visible in one place: the
-right-hand block gives Fleiss $\kappa$ over the three language-conditioned verdicts and mean
-pairwise Kendall $\tau$ between the English and Arabic rankings---what the invariance objective targets. Bold marks the best value in each column
-over all $28$ configurations. Full per-model results are given in
-Tables~\ref{tab:results-main} and~\ref{tab:results-consistency}.}
+\centering\footnotesize\setlength{\tabcolsep}{3.6pt}
+\caption{Condensed results on the held-out trilingual test set. For each training group we report the
+group mean over its $n$ configurations, followed by its most accurate (acc.) and, where different,
+its most cross-lingually stable (stab.) member. The three metric blocks are the official ranking
+metric (Recall@5, whose attainable ceiling is $0.3005$), the official verdict metric (macro-F1), and
+the consistency measures the invariance objective targets: Fleiss $\kappa$ over the three
+language-conditioned verdicts and mean pairwise Kendall $\tau$ between the English and Arabic
+rankings. Bold marks the best value in each column over all $28$ configurations. Full per-model
+results are in Tables~\ref{tab:results-main} and~\ref{tab:results-consistency}.}
 \label{tab:results-summary}
-\begin{tabular}{l c rrrr rr}
+\begin{tabular}{l c rrrr rrrr rr}
 \toprule
-& & \multicolumn{4}{c}{Accuracy (macro-F1)} & \multicolumn{2}{c}{Consistency} \\
-\cmidrule(lr){3-6}\cmidrule(lr){7-8}
-Configuration & $n$ & EN & ES & AR & Mean & $\kappa$ & $\tau$ \\
+& & \multicolumn{4}{c}{Recall@5 (ceiling $0.3005$)} & \multicolumn{4}{c}{Macro-F1} & \multicolumn{2}{c}{Consistency} \\
+\cmidrule(lr){3-6}\cmidrule(lr){7-10}\cmidrule(lr){11-12}
+Configuration & $n$ & EN & ES & AR & Mean & EN & ES & AR & Mean & $\kappa$ & $\tau$ \\
 \midrule
-\itshape Invariance-trained (this thesis) & 13 & \itshape 0.6183 & \itshape 0.6176 & \itshape 0.6085 & \itshape 0.6148 & \itshape 0.9443 & \itshape 0.5667 \\
-\quad Qwen, inv.\ $\lambda^\star$=0.1 {\scriptsize (acc.)} & & 0.6192 & 0.6197 & 0.6157 & 0.6182 & 0.9479 & 0.5820 \\
-\quad Llama, inv.\ $\lambda^\star$=0.3 {\scriptsize (stab.)} & & 0.6165 & 0.6150 & 0.6034 & 0.6116 & 0.9428 & \textbf{0.6440} \\
+\itshape Invariance-trained (this thesis) & 13 & \itshape 0.2673 & \itshape 0.2676 & \itshape 0.2617 & \itshape 0.2656 & \itshape 0.6183 & \itshape 0.6176 & \itshape 0.6085 & \itshape 0.6148 & \itshape 0.9443 & \itshape 0.5667 \\
+\quad Qwen, inv.\ $\lambda^\star$=0.1 {\scriptsize (acc.)} &  & 0.2663 & 0.2667 & 0.2622 & 0.2651 & 0.6192 & 0.6197 & 0.6157 & 0.6182 & 0.9479 & 0.5820 \\
+\quad Llama, inv.\ $\lambda^\star$=0.3 {\scriptsize (stab.)} &  & 0.2683 & 0.2684 & 0.2638 & 0.2668 & 0.6165 & 0.6150 & 0.6034 & 0.6116 & 0.9428 & \textbf{0.6440} \\
 \addlinespace[3pt]
-\itshape Standard multilingual fine-tuning & 9 & \itshape 0.6158 & \itshape 0.6224 & \itshape 0.5847 & \itshape 0.6076 & \itshape 0.9028 & \itshape 0.1308 \\
-\quad Llama, standard {\scriptsize (acc.)} & & 0.6256 & \textbf{0.6320} & 0.6105 & \textbf{0.6227} & 0.8810 & 0.0863 \\
-\quad Qwen, num.\,norm. {\scriptsize (stab.)} & & 0.6221 & 0.6258 & 0.5810 & 0.6096 & 0.9272 & 0.2496 \\
+\itshape Standard multilingual fine-tuning & 9 & \itshape 0.2657 & \itshape 0.2728 & \itshape 0.2653 & \itshape 0.2679 & \itshape 0.6158 & \itshape 0.6224 & \itshape 0.5847 & \itshape 0.6076 & \itshape 0.9028 & \itshape 0.1308 \\
+\quad Llama, standard {\scriptsize (acc.)} &  & 0.2649 & 0.2704 & \textbf{0.2692} & 0.2682 & 0.6256 & \textbf{0.6320} & 0.6105 & \textbf{0.6227} & 0.8810 & 0.0863 \\
+\quad Qwen, num.\,norm. {\scriptsize (stab.)} &  & 0.2702 & 0.2762 & 0.2654 & 0.2706 & 0.6221 & 0.6258 & 0.5810 & 0.6096 & 0.9272 & 0.2496 \\
 \addlinespace[3pt]
-\itshape Earlier trace scorers & 4 & \itshape 0.5861 & \itshape 0.5878 & \itshape 0.5851 & \itshape 0.5863 & \itshape 0.8596 & \itshape 0.0578 \\
-\quad Mistral, multiling.\ trace scorer (10 ep.) {\scriptsize (acc.)} & & 0.5967 & 0.5932 & 0.5828 & 0.5909 & 0.9040 & 0.0955 \\
-\quad Mistral, numeric trace scorer {\scriptsize (stab.)} & & 0.5826 & 0.5693 & 0.5938 & 0.5819 & 0.8643 & 0.1075 \\
+\itshape Earlier trace scorers & 4 & \itshape 0.2271 & \itshape 0.2406 & \itshape 0.2276 & \itshape 0.2318 & \itshape 0.5861 & \itshape 0.5878 & \itshape 0.5851 & \itshape 0.5863 & \itshape 0.8596 & \itshape 0.0578 \\
+\quad Mistral, multiling.\ trace scorer (10 ep.) {\scriptsize (acc.)} &  & 0.2566 & 0.2549 & 0.2520 & 0.2545 & 0.5967 & 0.5932 & 0.5828 & 0.5909 & 0.9040 & 0.0955 \\
+\quad Mistral, numeric trace scorer {\scriptsize (stab.)} &  & 0.2184 & 0.2155 & 0.2228 & 0.2189 & 0.5826 & 0.5693 & 0.5938 & 0.5819 & 0.8643 & 0.1075 \\
 \addlinespace[3pt]
-\itshape Prompted baselines & 2 & \itshape 0.5761 & \itshape 0.5756 & \itshape 0.5755 & \itshape 0.5757 & \itshape 0.9108 & \itshape 0.2185 \\
-\quad Mistral, prompted (zero-shot) {\scriptsize (acc.)} & & 0.5771 & 0.5795 & 0.5718 & 0.5761 & 0.9168 & 0.3674 \\
+\itshape Prompted baselines & 2 & \itshape 0.2229 & \itshape 0.2198 & \itshape 0.2174 & \itshape 0.2200 & \itshape 0.5761 & \itshape 0.5756 & \itshape 0.5755 & \itshape 0.5757 & \itshape 0.9108 & \itshape 0.2185 \\
+\quad Mistral, prompted (zero-shot) {\scriptsize (acc.)} &  & 0.2225 & 0.2173 & 0.2129 & 0.2176 & 0.5771 & 0.5795 & 0.5718 & 0.5761 & 0.9168 & 0.3674 \\
 \midrule
-\multicolumn{8}{l}{\itshape By backbone family (all settings pooled)}\\
-\quad Llama & 13 & 0.6139 & 0.6164 & 0.5948 & 0.6083 & 0.9195 & 0.3161 \\
-\quad Qwen & 10 & 0.6175 & 0.6189 & 0.6020 & 0.6128 & 0.9353 & 0.4505 \\
-\quad Mistral & 5 & 0.5843 & 0.5861 & 0.5825 & 0.5843 & 0.8711 & 0.1197 \\
+\multicolumn{12}{l}{\itshape By backbone family (all settings pooled)}\\
+\quad Llama & 13 & 0.2636 & 0.2674 & 0.2609 & 0.2640 & 0.6139 & 0.6164 & 0.5948 & 0.6083 & 0.9195 & 0.3161 \\
+\quad Qwen & 10 & 0.2663 & 0.2681 & 0.2620 & 0.2655 & 0.6175 & 0.6189 & 0.6020 & 0.6128 & 0.9353 & 0.4505 \\
+\quad Mistral & 5 & 0.2262 & 0.2359 & 0.2247 & 0.2289 & 0.5843 & 0.5861 & 0.5825 & 0.5843 & 0.8711 & 0.1197 \\
 \midrule
-\itshape Random ranking (floor; invariant by constr.) & 1 & 0.5820 & 0.5820 & 0.5820 & 0.5820 & \itshape 1.0000 & \itshape 1.0000 \\
+\itshape Random ranking (floor) & 1 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 & \itshape 1.0000 & \itshape 1.0000 \\
 \bottomrule
 \end{tabular}
 \end{table}

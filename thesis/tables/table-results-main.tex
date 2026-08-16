@@ -1,9 +1,5 @@
 \begin{table}[htbp]
 \centering\small\setlength{\tabcolsep}{4.2pt}
-\caption{Per-model results on the aligned trilingual validation set ($4{,}233$ parallel claims per
-language). \emph{Mean} is the average macro-F1 over the three languages; best value per column in
-bold. All values are means over three random seeds.}
-\label{tab:results-main}
 \begin{tabular}{l rrr rrr r}
 \toprule
 & \multicolumn{3}{c}{Recall@5} & \multicolumn{3}{c}{Macro-F1} & \\
@@ -49,4 +45,10 @@ Model & EN & ES & AR & EN & ES & AR & Mean \\
 Recall@5 upper bound & \multicolumn{3}{c}{$0.3005$} & \multicolumn{4}{c}{---} \\
 \bottomrule
 \end{tabular}
+\vspace{6pt}
+\caption{Per-model results on the aligned trilingual test set ($4{,}233$ parallel claims per
+language). \emph{Mean} is the average macro-F1 over the three languages; best value per column in
+bold. All values are means over three random seeds.}
+\label{tab:results-main}
+
 \end{table}

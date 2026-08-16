@@ -9,7 +9,37 @@
 \usepackage{wrapfig}
 \usepackage{multirow}
 \usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, decorations.pathreplacing}
 \usepackage{soul}
+% --- AI Usage Card -------------------------------------------------
+% Loaded before tcolorbox: this package requires tcolorbox with
+% [breakable,most]; the plain \usepackage{tcolorbox} below then becomes a
+% harmless no-op. Rendered by \makeAIUsageCard at the end of the appendix.
+\usepackage{ai-usage-card}
+
+\aiProjectName{Language-Invariant Reason Ranking in Numerical Fact-Checking}
+\aiDomain{Natural Language Processing; automated fact-checking}
+\aiKeyApplication{Multilingual numerical claim verification and trace ranking}
+
+\aiContactName{Ahmad Raza Khawaja}
+\aiContactEmail{ahmad.khawaja@stud.uni-goettingen.de}
+\aiContactAffiliation{University of G\"ottingen}
+
+\aiModels{GPT-5.5}
+
+\aiFindingLiterature{Suggesting related work, all suggestions were verified.}
+\aiFindingExamples{Used for Finding examples from the related literature.}
+
+\aiImprovingContent{Condensing and copy editing human written own text.}
+
+\aiGeneratingCode{Analysis and plotting scripts for the reported statistics, figures, and tables.}
+\aiRefactoringCode{Used to refactor and check for bugs and quality improvement of the code written by the author himself. }
+
+\aiWhyUse{To speed up drafting, analysis, and typesetting, I as an author take full responsibility for all claims.}
+\aiMitigateErrors{All content generated from AI is reviewed thoroughly to ensure there are no errors, or instance of hullucination.}
+\aiMinimizeHarm{Multiple rigorous manual review cycles were done to ensure no content which has no backing is passed through.}
+% -------------------------------------------------------------------
+
 \usepackage{tcolorbox}
 \usepackage{geometry}
 \usepackage{svg}
@@ -62,6 +92,12 @@
 \makeatother
 
 
+% The table of contents lives in titlepage.tex, which is \input *before*
+% \maketitle. acmart's running header expands \shorttitle, which \maketitle
+% has not defined yet, so any TOC page beyond the first raises "Undefined
+% control sequence". Predefine it; \maketitle overrides it later if it wishes.
+\providecommand{\shorttitle}{Language-Invariant Reason Ranking}
+
 % The actual document starts here:
 \begin{document}
 
@@ -89,12 +125,35 @@
 \renewcommand{\shortauthors}{Ahmad Raza Khawaja}
 
 %%
-%% The abstract is a short summary of the work to be presented in the
-%% article.
-% \begin{abstract}
-% \section*{Abstract}     % * excludes this section from the table of contents
-% Numerical claims are common in political discourse, news, and social media, yet their verification remains difficult even within a single language. In multilingual settings, this challenge is amplified: large language models often fail to treat semantically equivalent claims consistently, so a claim and its translation may receive different reasoning-trace rankings and, consequently, different verdicts. This thesis investigates whether optimizing explicitly for language-invariant reasoning yields genuine improvements in reasoning quality and ranking performance, or merely produces more stable surface behavior. We study this question using CLEF CheckThat! 2026 Task 2, which requires ranking candidate reasoning traces for claims in English, Spanish, and Arabic and deriving a final verdict from the highest-ranked traces. Building on our shared-task submission, a Llama-3.1-8B trace scorer fine-tuned with Quantized Low-Rank Adaptation (QLoRA) that ranked first in English and third in Spanish, we compare prompting-based ranking, Direct Preference Optimization with English-only and multilingual preference data, and supervised trace scoring. Across these approaches, we evaluate both task performance, using Recall@5, MRR@5, and macro-F1, and cross-lingual consistency, using agreement between model judgments over parallel claims. [Placeholder for results: Experiments on the parallel English, Spanish, and Arabic datasets are ongoing; upon completion, this section will report whether training for language invariance improves ranking performance and reasoning quality, how the effect varies across languages, and what it implies for the relationship between cross-lingual consistency and genuine numerical reasoning.]
-% \end{abstract}
+%% The abstract is a short summary of the work presented in this thesis.
+\begin{abstract}
+Numerical claims are common in political discourse, news, and social media, and verifying them is
+difficult even within a single language. In multilingual settings the difficulty compounds: large
+language models frequently fail to treat semantically equivalent claims consistently, so a claim and
+its translation may receive different reasoning-trace rankings and, in turn, different verdicts. This
+thesis asks whether language invariance is a useful \emph{training objective} for multilingual
+reasoning, or only a property worth measuring.
+
+We study the question on CLEF CheckThat! 2026 Task~2, which requires ranking candidate reasoning
+traces for numerical claims in English, Spanish, and Arabic and deriving a verdict from the top-ranked
+traces. Building on our shared-task submission---a Llama-3.1-8B trace scorer fine-tuned with Quantized
+Low-Rank Adaptation (QLoRA) that ranked first on English and third on Spanish---we introduce a
+score-level language-invariance objective that penalises a model when the normalised relevance scores
+it assigns to the same reasoning traces diverge across languages, together with an evaluation protocol
+that measures cross-lingual agreement independently of task accuracy and at two levels: the final
+verdict and the underlying trace ranking. We evaluate $28$ configurations across three open-weight
+backbones on a held-out trilingual test set of $4{,}233$ parallel claims.
+
+The outcome is a separation rather than a uniform improvement. Invariance training leaves the official
+ranking metric unchanged---Recall@5 is indistinguishable from standard multilingual fine-tuning, and
+both approaches sit near the metric's attainable ceiling---while improving the cross-lingual stability
+of the ranking roughly fourfold, with the invariance-trained and non-invariance populations not
+overlapping at all. A modest gain in verdict quality accompanies it, concentrated in Arabic and within
+Arabic in the minority \textsf{Conflicting} class. Verdict-level agreement, by contrast, is uniformly
+high across every system we evaluate and fails to discriminate between them, so consistency measured
+only over final answers would have missed the effect entirely. What the objective changes is not the
+label a model arrives at, but whether it arrives there from the same evidence.
+\end{abstract}
 
 
 %%
@@ -102,7 +161,7 @@
 \maketitle
 \addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
 
-% \input{chapters/introduction}
+\input{chapters/introduction}
 
 \input{chapters/related_work}
 
@@ -111,6 +170,8 @@
 \input{chapters/methodology}
 
 \input{chapters/results}
+
+\input{chapters/conclusion}
 
 %% The next two lines define the bibliography style to be used and
 %% the bibliography file.

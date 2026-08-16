@@ -1,9 +1,5 @@
 \begin{table}[htbp]
 \centering\small\setlength{\tabcolsep}{5pt}
-\caption{Cross-lingual consistency, measured separately from task accuracy. \emph{Complete} is the
-fraction of claims on which all three languages produce the same verdict. Ranking agreement is the
-mean pairwise Kendall $\tau$ between the language-conditioned trace orderings. Best per column in bold.}
-\label{tab:results-consistency}
 \begin{tabular}{l rr rrr}
 \toprule
 & \multicolumn{2}{c}{Verdict agreement} & \multicolumn{3}{c}{Ranking agreement (Kendall $\tau$)} \\
@@ -47,4 +43,10 @@ Model & Complete & Fleiss $\kappa$ & EN--ES & EN--AR & ES--AR \\
 \quad Llama, prompted (zero-shot) & 0.9320 & 0.9049 & 0.1242 & 0.0697 & 0.3416 \\
 \bottomrule
 \end{tabular}
+\vspace{6pt}
+\caption{Cross-lingual consistency, measured separately from task accuracy. \emph{Complete} is the
+fraction of claims on which all three languages produce the same verdict. Ranking agreement is the
+mean pairwise Kendall $\tau$ between the language-conditioned trace orderings. Best per column in bold.}
+\label{tab:results-consistency}
+
 \end{table}

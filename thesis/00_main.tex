@@ -128,31 +128,32 @@
 %% The abstract is a short summary of the work presented in this thesis.
 \begin{abstract}
 Numerical claims are common in political discourse, news, and social media, and verifying them is
-difficult even within a single language. In multilingual settings the difficulty compounds: large
-language models frequently fail to treat semantically equivalent claims consistently, so a claim and
-its translation may receive different reasoning-trace rankings and, in turn, different verdicts. This
-thesis asks whether language invariance is a useful \emph{training objective} for multilingual
-reasoning, or only a property worth measuring.
+difficult even in one language. Multilingual verification is harder still. Large language models do
+not always treat translated versions of the same claim consistently. As a result, a claim and its
+translation may receive different reasoning-trace rankings and possibly different verdicts. This
+thesis asks whether language invariance is useful as a \emph{training objective} for multilingual
+reasoning, rather than only as a property to measure.
 
 We study the question on CLEF CheckThat! 2026 Task~2, which requires ranking candidate reasoning
-traces for numerical claims in English, Spanish, and Arabic and deriving a verdict from the top-ranked
-traces. Building on our shared-task submission---a Llama-3.1-8B trace scorer fine-tuned with Quantized
-Low-Rank Adaptation (QLoRA) that ranked first on English and third on Spanish---we introduce a
-score-level language-invariance objective that penalises a model when the normalised relevance scores
-it assigns to the same reasoning traces diverge across languages, together with an evaluation protocol
-that measures cross-lingual agreement independently of task accuracy and at two levels: the final
-verdict and the underlying trace ranking. We evaluate $28$ configurations across three open-weight
-backbones on a held-out trilingual test set of $4{,}233$ parallel claims.
+traces for numerical claims in English, Spanish, and Arabic. A verdict is then derived from the
+top-ranked traces. We build on our shared-task submission: a Llama-3.1-8B trace scorer fine-tuned with
+Quantized Low-Rank Adaptation (QLoRA), which ranked first on English and third on Spanish. We add a
+score-level language-invariance objective. It penalises the model when it gives different normalised
+relevance scores to corresponding reasoning traces across languages. We also introduce an evaluation
+protocol that separates task accuracy from cross-lingual agreement and measures agreement at two
+levels: the final verdict and the underlying trace ranking. We evaluate $28$ configurations across
+three open-weight backbones on a held-out trilingual test set of $4{,}233$ parallel claims.
 
-The outcome is a separation rather than a uniform improvement. Invariance training leaves the official
-ranking metric unchanged---Recall@5 is indistinguishable from standard multilingual fine-tuning, and
-both approaches sit near the metric's attainable ceiling---while improving the cross-lingual stability
-of the ranking roughly fourfold, with the invariance-trained and non-invariance populations not
-overlapping at all. A modest gain in verdict quality accompanies it, concentrated in Arabic and within
-Arabic in the minority \textsf{Conflicting} class. Verdict-level agreement, by contrast, is uniformly
-high across every system we evaluate and fails to discriminate between them, so consistency measured
-only over final answers would have missed the effect entirely. What the objective changes is not the
-label a model arrives at, but whether it arrives there from the same evidence.
+The results show a clear separation between ranking quality and ranking stability. Invariance training
+does not change the official ranking metric: Recall@5 is statistically indistinguishable from standard
+multilingual fine-tuning, and both approaches are close to the metric's attainable ceiling. However,
+invariance training makes the rankings roughly four times more stable across languages. The stability
+ranges of the invariance-trained and non-invariance systems do not overlap. Verdict quality also
+improves modestly, mainly in Arabic and especially for the minority \textsf{Conflicting} class.
+Verdict-level agreement is already high for every system and therefore does not distinguish between
+them. Measuring consistency only from final answers would have missed the main effect. The objective
+does not mainly change the label the model reaches; it changes whether the model relies on the same
+evidence across languages.
 \end{abstract}
 
 
@@ -160,6 +161,9 @@ label a model arrives at, but whether it arrives there from the same evidence.
 %% This command processes the author and title
 \maketitle
 \addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
+% Keep float-to-text and section spacing at their natural values instead of
+% stretching them to force every page to the same bottom edge.
+\raggedbottom
 
 \input{chapters/introduction}
 

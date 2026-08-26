@@ -16,69 +16,65 @@
 \label{sec:results}
 
 This chapter reports and interprets the experimental results. We first describe the evaluation setup
-and the data-hygiene decisions that determine which runs enter the analysis
-(Section~\ref{subsec:res-setup}). We then present task performance
-(Section~\ref{subsec:res-task}) and cross-lingual consistency
-(Section~\ref{subsec:res-consistency}) separately, as the methodology requires, before bringing them
-together to answer whether optimizing for language invariance improves ranking
-(Section~\ref{subsec:res-invariance}, RQ1). Section~\ref{subsec:res-language} examines where the
-cross-lingual differences actually live, Section~\ref{subsec:res-ablations} covers the invariance
-weight, numeric normalization, and backbone families, and
-Section~\ref{subsec:res-relationship} analyses the relationship between invariance and reasoning
-quality (RQ2). Section~\ref{subsec:res-threats} states the threats to validity, including a context-budget
-confound that qualifies the accuracy comparison, and Section~\ref{subsec:res-summary} summarizes the
-findings against the three research questions (RQ3).
+and explain which runs are included in the analysis (Section~\ref{subsec:res-setup}). We then report
+task performance (Section~\ref{subsec:res-task}) and cross-lingual consistency
+(Section~\ref{subsec:res-consistency}) separately. Section~\ref{subsec:res-invariance} brings these
+results together to answer RQ1. Section~\ref{subsec:res-language} identifies where the cross-lingual
+differences occur, and Section~\ref{subsec:res-ablations} examines the invariance weight, numeric
+normalisation, and backbone families. Section~\ref{subsec:res-relationship} analyses the relationship
+between invariance and reasoning quality (RQ2). Finally, Section~\ref{subsec:res-threats} discusses
+the threats to validity, including a context-budget confound, and Section~\ref{subsec:res-summary}
+summarises the findings for all three research questions.
 
 \subsection{Experimental Scope and Data Hygiene}
 \label{subsec:res-setup}
 
-All results are computed on the held-out \emph{test} set of the shared task, in the aligned trilingual
-form described in Section~\ref{subsec:method-data}: $4{,}233$ claims present in English, Spanish, and
-Arabic with parallel trace sets, evaluated per language and, for consistency measures, across the
-three language-conditioned outputs of the same claim. The test set is disjoint from the training and
-validation splits: no configuration was trained on it, and model selection (early stopping, best-epoch
-choice) used the validation split only. The numbers below therefore measure generalization to unseen
-claims rather than fit. Every reported configuration was trained and
-evaluated with three random seeds and we report the mean. In total we evaluate $32$ configurations
-spanning prompted baselines, the earlier trace scorers, standard multilingual fine-tuning, and the
-invariance-trained models introduced in this thesis.
+All results use the held-out \emph{test} set in the aligned trilingual form described in
+Section~\ref{subsec:method-data}. It contains $4{,}233$ claims, each available in English, Spanish,
+and Arabic with parallel trace sets. Task metrics are calculated separately for each language.
+Consistency metrics compare the three language-conditioned outputs for the same claim. The test set
+is separate from the training and validation splits. No configuration was trained on it, and early
+stopping and best-epoch selection used only the validation split. The results therefore measure
+generalisation to unseen claims. Each configuration was trained and evaluated with three random
+seeds, and we report the mean. In total, the study contains $32$ configurations: prompted baselines,
+earlier trace scorers, standard multilingual fine-tunes, and the invariance-trained models introduced
+in this thesis.
 
 \paragraph{Excluded runs.}
-Four of the $32$ configurations are excluded from every statistic reported below. The rows
-\emph{Mistral, English DPO}, \emph{Llama, inv.\ $\lambda^\star$=0.05}, and \emph{Qwen, prompted} carry
-scores that are identical to one another to four decimal places and identical across all three
-languages, together with cross-lingual agreement of exactly $1.000$ on every measure. Three distinct
-systems cannot plausibly produce byte-identical scores; these rows are duplicated or failed runs
-rather than results, and reporting them would contaminate every group mean. We exclude them and
-report the analysis over the remaining $28$ configurations.
+Four of the $32$ configurations are excluded from the statistics below. Three rows---\emph{Mistral,
+English DPO}, \emph{Llama, inv.\ $\lambda^\star$=0.05}, and \emph{Qwen, prompted}---have the same
+scores to four decimal places. Their scores are also identical across all three languages, and every
+cross-lingual agreement measure is exactly $1.000$. Three different systems cannot plausibly produce
+identical results at this level. We therefore treat these rows as duplicated or failed runs and
+exclude them to avoid distorting the group means. The remaining analysis contains $28$
+configurations.
 
-The fourth exclusion is different in kind and worth stating explicitly, because it illustrates the
-central measurement principle of this thesis. The \emph{random ranking} baseline also achieves
+The fourth exclusion has a different reason and illustrates the central measurement principle of this
+thesis. The \emph{random ranking} baseline also achieves
 perfect cross-lingual agreement---Fleiss $\kappa = 1.000$ and Kendall $\tau = 1.000$ on every language
 pair. This is not an artefact: the baseline ranks traces in a fixed seeded permutation of trace
 indices that does not depend on the input at all, so it produces literally the same ranking in every
-language and is \emph{invariant by construction}. It is also useless, sitting at the bottom of every
-accuracy measure. A system can therefore be perfectly language-invariant and still carry no
-information, which is precisely why invariance must be reported alongside, and never instead of, task
-accuracy~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}. We exclude the random
-baseline from correlation statistics for the same reason---it would dominate them while being
-uninformative---but retain it in Table~\ref{tab:results-summary} as the accuracy floor.
+language. It is therefore \emph{invariant by construction}. However, it is also at the bottom of
+every accuracy measure. This shows that a system can be perfectly invariant while carrying no useful
+information. Invariance must therefore be reported alongside task accuracy, never instead of
+it~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}. We exclude the random baseline
+from correlation statistics because its perfect agreement would dominate them without adding useful
+information. We retain it in Table~\ref{tab:results-summary} as the accuracy floor.
 
 \paragraph{Achievable ceiling.}
-As established in Section~\ref{subsec:method-task}, Recall@5 is structurally capped. On this
-test set the upper bound is $0.3005$, and $578$ of the $4{,}233$ claims ($13.7\%$) have no
-candidate trace whose verdict matches the gold label, contributing zero Recall@5 regardless of the
-ranking. All Recall@5 figures below should be read against this ceiling rather than against $1.0$.
+As established in Section~\ref{subsec:method-task}, Recall@5 has a structural upper bound. On this
+test set, the bound is $0.3005$. In addition, $578$ of the $4{,}233$ claims ($13.7\%$) have no
+candidate trace whose verdict matches the gold label. These claims receive zero Recall@5 regardless
+of the ranking. The Recall@5 results below should therefore be compared with $0.3005$, not with $1.0$.
 
 \paragraph{Terminology.}
-The task is scored on two metrics that behave differently, so we keep them apart throughout. We use
-\emph{verdict quality} for the claim-level macro-F1 and \emph{ranking quality} for Recall@5, and where
-a single summary of task performance is needed---for example on the horizontal axis of
-Figure~\ref{fig:results-tradeoff}, or in the group comparisons---we use \emph{mean macro-F1}, the
-verdict macro-F1 averaged over English, Spanish, and Arabic. Where the word \emph{accuracy} appears
-below it is shorthand for this quantity, never for Recall@5 and never for the official combined score.
-\emph{Consistency} always refers to the cross-lingual agreement measures (Fleiss $\kappa$, Cohen's
-$\kappa$, Kendall $\tau$), which are computed independently of both task metrics.
+The task uses two metrics that behave differently, so we keep them separate. \emph{Verdict quality}
+means claim-level macro-F1, while \emph{ranking quality} means Recall@5. When one summary of task
+performance is needed, we use \emph{mean macro-F1}: verdict macro-F1 averaged across English,
+Spanish, and Arabic. This is also what \emph{accuracy} means below. It never refers to Recall@5 or the
+official combined score. \emph{Consistency} refers only to cross-lingual agreement measures such as
+Fleiss $\kappa$, Cohen's $\kappa$, and Kendall $\tau$. These are calculated independently of both task
+metrics.
 
 \subsection{Task Performance}
 \label{subsec:res-task}
@@ -92,37 +88,35 @@ Several observations follow.
 \input{tables/table-results-summary}
 
 \paragraph{Every trained system beats the baselines, but the margins are narrow.}
-The random ranking baseline reaches $0.2181$ Recall@5 and $0.5820$ macro-F1 in English, and the
-zero-shot prompted baselines are barely distinguishable from it ($0.2234$ and $0.5751$ for the Llama
-prompted baseline). This reproduces, on a larger and fully parallel evaluation set, the finding from
-our shared-task system that zero-shot generative ranking adds little over chance in this setting. The
-fine-tuned trace scorers improve substantially on macro-F1 (up to $0.6263$ in English) and modestly
-on Recall@5 (up to $0.2710$).
+The random ranking baseline reaches $0.2181$ Recall@5 and $0.5820$ macro-F1 in English. The zero-shot
+prompted baselines are barely different: the Llama prompted baseline scores $0.2234$ and $0.5751$.
+This confirms, on a larger and fully parallel evaluation set, the shared-task finding that zero-shot
+generative ranking adds little over chance in this setting. Fine-tuned trace scorers improve
+substantially on macro-F1, reaching up to $0.6263$ in English. Their Recall@5 improvement is smaller,
+reaching up to $0.2710$.
 
 \paragraph{Ranking headroom is nearly exhausted; verdict quality is not.}
-The best Recall@5 of $0.2710$ corresponds to roughly $90\%$ of the achievable ceiling of $0.3005$. In
-other words, the ranking component of the task is close to saturated for this candidate-trace set:
-further gains cannot come from better ranking, only from candidate sets that contain more
-gold-matching traces. Macro-F1, by contrast, ranges from $0.5715$ to $0.6320$ across configurations
-and remains the component where modelling choices still matter. This asymmetry should be kept in mind
-when reading the official combined score, which averages the two: it is increasingly dominated by the
-verdict term.
+The best Recall@5, $0.2710$, is roughly $90\%$ of the achievable ceiling of $0.3005$. The ranking
+component is therefore close to saturated for this candidate-trace set. Further gains will require
+candidate sets with more gold-matching traces, not only better ordering of the current traces.
+Macro-F1, by contrast, ranges from $0.5715$ to $0.6320$, so modelling choices still matter for
+verdict quality. The official score averages these two metrics and is therefore increasingly driven
+by the verdict term.
 
 \paragraph{Metric redundancy.}
 Across the $28$ configurations, Recall@5, Precision@5, MRR@5, macro-F1, and the per-class F1 scores
-for \textsf{True} and \textsf{False} are almost collinear, correlating at Pearson $r$ between $0.92$
-and $0.99$. The single exception is F1 on the minority \textsf{Conflicting} class, which correlates
-with the others at only $r=0.61$--$0.85$. Most of the headline metrics therefore restate the same
-ordering of systems, and \textsf{Conflicting} is the class that actually discriminates between them.
-We return to this class in Section~\ref{subsec:res-language}, where it turns out to carry the entire
-cross-lingual effect.
+for \textsf{True} and \textsf{False} are almost collinear. Their Pearson correlations range from
+$0.92$ to $0.99$. F1 for the minority \textsf{Conflicting} class is the exception, with correlations
+of only $r=0.61$--$0.85$. Most headline metrics therefore produce nearly the same ordering of
+systems. The \textsf{Conflicting} class is what separates them. Section~\ref{subsec:res-language}
+shows that this class also carries the cross-lingual effect.
 
 \subsection{Cross-Lingual Consistency}
 \label{subsec:res-consistency}
 
-The right-hand block of Table~\ref{tab:results-summary} reports the consistency measures, computed
-independently of accuracy (per-model values in Table~\ref{tab:results-consistency}). The central result of this section is that the two families of consistency measure behave
-completely differently, and that only one of them discriminates between systems.
+The right-hand block of Table~\ref{tab:results-summary} reports consistency independently of accuracy;
+Table~\ref{tab:results-consistency} gives the per-model values. The two types of consistency measure
+behave very differently. Only ranking agreement clearly distinguishes between systems.
 
 
 \begin{figure}[htbp]
@@ -137,30 +131,27 @@ completely differently, and that only one of them discriminates between systems.
 
 \paragraph{Verdicts agree across languages; rankings do not.}
 As Figure~\ref{fig:results-agreement} shows, Fleiss $\kappa$ over the language-conditioned verdicts is
-uniformly high and occupies a narrow band: $0.8596$ for the earlier trace scorers, $0.9028$ for
-standard fine-tuning, and $0.9443$ for invariance-trained models. Judged on verdict agreement alone,
-every system looks strongly language-invariant. Kendall $\tau$ between the language-conditioned trace
-\emph{rankings} tells a very different story: on the English--Arabic pair it spans $0.012$ to $0.644$
-across individual configurations and $0.0578$ to $0.5667$ across groups, and on the English--Spanish
-pair the weakest configuration is very slightly negative ($-0.008$), i.e.\ no better than an unrelated
-ordering.
+high and falls within a narrow range: $0.8596$ for the earlier trace scorers, $0.9028$ for standard
+fine-tuning, and $0.9443$ for invariance-trained models. Based only on verdict agreement, every system
+appears strongly language-invariant. Kendall $\tau$ between the trace \emph{rankings} gives a very
+different picture. For English--Arabic, it ranges from $0.012$ to $0.644$ across individual
+configurations and from $0.0578$ to $0.5667$ across groups. For English--Spanish, the weakest
+configuration is slightly negative ($-0.008$), meaning that its ordering is no better than unrelated.
 
-The interpretation is that standard multilingual fine-tuning produces models that reach the same
-verdict in all three languages while justifying it with almost entirely different evidence: the
-top-ranked traces in English and Arabic are close to uncorrelated ($\tau \approx 0.13$). Because the
-final verdict is a majority vote over the top five traces, a model can arrive at a stable label
-through unstable and largely disjoint evidence. Verdict-level agreement statistics therefore
-substantially overstate cross-lingual robustness, and ranking-level agreement is the measure that
-exposes the difference. This is a methodological finding in its own right: had we followed the common
-practice of reporting only $\kappa$ over final answers, we would have concluded that all our systems
-were already language-invariant.
+Standard multilingual fine-tuning therefore produces models that usually reach the same verdict in
+all three languages but support it with different evidence. The top-ranked traces in English and
+Arabic are nearly uncorrelated ($\tau \approx 0.13$). Because the final verdict is a majority vote
+over the top five traces, stable labels can result from unstable and largely different evidence.
+Verdict agreement therefore overstates cross-lingual robustness. Ranking agreement reveals the
+difference. If we had reported only $\kappa$ over final answers, we would have concluded that all
+systems were already language-invariant.
 
 \subsection{Does Invariance Training Improve Ranking? (RQ1)}
 \label{subsec:res-invariance}
 
-Figure~\ref{fig:results-tradeoff} places every configuration in the plane defined by mean macro-F1
-(accuracy) and Kendall $\tau$ between English and Arabic rankings (stability). The picture is
-unusually clean.
+Figure~\ref{fig:results-tradeoff} plots every configuration by mean macro-F1 (accuracy) and Kendall
+$\tau$ between English and Arabic rankings (stability). The two training groups separate clearly on
+stability but overlap on accuracy.
 
 \begin{figure}[htbp]
   \centering
@@ -174,45 +165,41 @@ unusually clean.
 
 
 \paragraph{The stability effect is large and fully separated.}
-Table~\ref{tab:results-summary} summarizes the group-level picture.
-The $13$ invariance-trained configurations reach a mean Kendall $\tau$ of $0.5667$ between English and
-Arabic, against $0.1308$ for standard fine-tuning, $0.0578$ for the earlier trace scorers, and
-$0.2185$ for the baselines. The two populations do not overlap at all: the \emph{worst}
-invariance-trained configuration ($\tau = 0.5089$) exceeds the \emph{best} non-invariance
-configuration ($\tau = 0.3674$) by a wide margin. The effect size is Cohen's $d = 6.09$
+Table~\ref{tab:results-summary} summarises the group-level picture.
+The $13$ invariance-trained configurations reach a mean English--Arabic Kendall $\tau$ of $0.5667$.
+The corresponding value is $0.1308$ for standard fine-tuning, $0.0578$ for the earlier trace
+scorers, and $0.2185$ for the baselines. The stability ranges do not overlap: the \emph{worst}
+invariance-trained configuration ($\tau = 0.5089$) is still well above the \emph{best}
+non-invariance configuration ($\tau = 0.3674$). The effect size is Cohen's $d = 6.09$
 (Welch $t = 16.71$, $p < 10^{-13}$; Mann--Whitney $p < 10^{-5}$). Verdict agreement moves in the same
-direction, from Fleiss $\kappa = 0.8924$ to $0.9443$ ($d = 2.20$, $p < 10^{-4}$). Complete separation
-of two populations is a stronger statement than any $p$-value computed from $28$ points, and it is the
-claim we rest on.
+direction, from Fleiss $\kappa = 0.8924$ to $0.9443$ ($d = 2.20$, $p < 10^{-4}$). This complete
+separation of the stability ranges is the main evidence for the effect.
 
 \paragraph{The accuracy effect is positive but not the argument.}
-Mean macro-F1 is also higher for invariance-trained models, $0.6148$ against $0.5977$
-($d = 1.61$, $p < 0.001$). However, unlike stability, the accuracy \emph{ranges overlap}: the best
-non-invariance configuration (\emph{Llama, standard}, $0.6227$) outperforms the best
-invariance-trained one (\emph{Qwen, inv.\ $\lambda^\star$=0.1}, $0.6182$). If invariance training were
-judged on English macro-F1 alone it would read as a null result, with the best English score
-belonging to \emph{Llama, reg.} ($0.6263$).
+Mean macro-F1 is also higher for invariance-trained models: $0.6148$ compared with $0.5977$
+($d = 1.61$, $p < 0.001$). Unlike the stability ranges, however, the accuracy ranges overlap. The
+best non-invariance configuration (\emph{Llama, standard}, $0.6227$) outperforms the best
+invariance-trained configuration (\emph{Qwen, inv.\ $\lambda^\star$=0.1}, $0.6182$). On English
+macro-F1 alone, invariance training shows no improvement; the best English score belongs to
+\emph{Llama, reg.} ($0.6263$).
 
 \paragraph{On the official ranking metric, the two are tied.}
-Recall@5 deserves separate comment, because it is the official ranking measure and because it does
-\emph{not} follow macro-F1. Averaged over the three languages, standard fine-tuning attains a
+Recall@5 needs to be considered separately because it is the official ranking metric and does
+\emph{not} follow macro-F1. Averaged over the three languages, standard fine-tuning has a
 marginally \emph{higher} Recall@5 than invariance training ($0.2679$ against $0.2656$), and the single
 best Recall@5 of the study belongs to a standard fine-tune (\emph{Llama, reg.}, $0.2710$ in English).
 Per language the two groups are within $0.007$ of each other everywhere
 (Figure~\ref{fig:results-language}, right panel). Given the ceiling of $0.3005$ and the near-collinearity
 of the ranking metrics noted in Section~\ref{subsec:res-task}, the fair reading is that the two
-approaches are tied on Recall@5: invariance training neither buys nor costs anything on the amount of
-relevant evidence retrieved into the top five.
+approaches are tied on Recall@5. Invariance training does not measurably change how much relevant
+evidence appears in the top five.
 
-The honest answer to RQ1 is therefore conditional, and it is worth stating precisely. Optimizing for
-language invariance does \emph{not} produce a better ranker in the sense of a higher per-language
-Recall@5; on that metric it is level with standard fine-tuning, and slightly behind on average. What
-it produces is a ranker whose ordering of reasoning traces is stable under translation---a roughly
-fourfold improvement in cross-lingual ranking agreement---together with better verdict quality
-(macro-F1) and a markedly smaller loss into Arabic. Since the property being optimized is
-cross-lingual consistency rather than per-language retrieval, this is the outcome the objective was
-designed to produce; but it means the contribution should be claimed as robustness, not as
-state-of-the-art ranking performance.
+The answer to RQ1 therefore depends on what is meant by improvement. Optimising for language
+invariance does \emph{not} increase per-language Recall@5. On that metric, it matches standard
+fine-tuning and is slightly lower on average. It does, however, make the trace ordering stable under
+translation, improving cross-lingual ranking agreement roughly fourfold. It also improves verdict
+quality and reduces the loss in Arabic. The contribution is therefore greater robustness across
+languages, not higher state-of-the-art ranking performance.
 
 \subsection{Where the Cross-Lingual Differences Live}
 \label{subsec:res-language}
@@ -228,12 +215,12 @@ state-of-the-art ranking performance.
   \label{fig:results-language}
 \end{figure}
 
-Averaged over the $28$ configurations, Spanish macro-F1 ($0.6118$) is marginally \emph{above} English
-($0.6099$), while Arabic ($0.5951$) sits $0.0147$ below English, a relative drop of about $2.4\%$.
-Recall@5 follows the same pattern ($0.2579$ / $0.2620$ / $0.2548$). The multilingual difficulty in
-this task is thus almost entirely an Arabic effect, consistent with the expectation from
-Section~\ref{subsec:bg-numeracy} that a different numeral script and lower pre-training representation
-would make Arabic the hard case~\cite{reddy2026effectscriptsformatsllm,Qi_2023}.
+Across the $28$ configurations, Spanish macro-F1 ($0.6118$) is slightly higher than English
+($0.6099$). Arabic macro-F1 is $0.5951$, which is $0.0147$ below English, or about $2.4\%$ lower.
+Recall@5 follows the same pattern for English, Spanish, and Arabic ($0.2579$ / $0.2620$ / $0.2548$).
+The multilingual difficulty in this task is therefore mainly an Arabic effect. This is consistent
+with the expectation from Section~\ref{subsec:bg-numeracy}: a different numeral script and weaker
+representation in pre-training make Arabic the more difficult case~\cite{reddy2026effectscriptsformatsllm,Qi_2023}.
 
 \begin{figure}[htbp]
   \centering
@@ -244,31 +231,29 @@ would make Arabic the hard case~\cite{reddy2026effectscriptsformatsllm,Qi_2023}.
   \label{fig:results-conflicting}
 \end{figure}
 
-Figure~\ref{fig:results-conflicting} localizes the effect. The aggregate Arabic drop is not spread
-evenly over the label space. F1 on \textsf{False} and \textsf{True} is almost flat across languages,
-losing only $0.0026$ and $0.0027$ respectively between English and Arabic, whereas F1 on the minority
-\textsf{Conflicting} class falls from $0.2625$ (English) and $0.2671$ (Spanish) to $0.2236$
-(Arabic)---a drop roughly fourteen times larger than for either majority class. Broken down by training type the contrast is sharper still.
-Averaging the per-configuration \textsf{Conflicting} F1 within each group and language, standard
-fine-tunes drop from $0.2701$ in English to $0.1781$ in Arabic---a relative loss of $34.1\%$ of the
-English value---whereas invariance-trained models fall only from $0.2698$ to $0.2513$, a relative loss
-of $6.8\%$. Unlike the aggregate Arabic gap
-discussed below, this difference is statistically clear: Welch $p = 0.0001$, Mann--Whitney
-$p = 0.0003$, with only two of the nine standard fine-tunes reaching into the range spanned by the
-thirteen invariance-trained models. \textsf{Conflicting} is both the rarest class ($427$ of $4{,}233$
-claims, $10.1\%$) and the one that requires genuinely weighing contradictory quantitative evidence
-rather than matching a single number, so it is the class where unstable evidence selection is most
-damaging. The class-level view thus explains the aggregate: invariance training helps Arabic
-specifically by protecting the hardest and rarest decision.
+Figure~\ref{fig:results-conflicting} shows that the Arabic drop is not spread evenly across labels.
+Between English and Arabic, F1 falls by only $0.0026$ for \textsf{False} and $0.0027$ for
+\textsf{True}. For the minority \textsf{Conflicting} class, it falls from $0.2625$ in English and
+$0.2671$ in Spanish to $0.2236$ in Arabic. This drop is roughly fourteen times larger than for either
+majority class. The difference becomes clearer when the models are grouped by training type.
+Standard fine-tunes fall from $0.2701$ in English to $0.1781$ in Arabic on \textsf{Conflicting} F1,
+a relative loss of $34.1\%$. Invariance-trained models fall only from $0.2698$ to $0.2513$, a relative
+loss of $6.8\%$. Unlike the aggregate Arabic gap discussed below, this difference is statistically
+clear (Welch $p = 0.0001$; Mann--Whitney $p = 0.0003$). Only two of the nine standard fine-tunes fall
+within the range of the thirteen invariance-trained models. \textsf{Conflicting} is the rarest class,
+with $427$ of $4{,}233$ claims ($10.1\%$). It also requires the model to weigh contradictory
+quantitative evidence rather than match a single number. Unstable evidence selection is therefore
+especially harmful for this class. The class-level analysis explains the aggregate result:
+invariance training helps Arabic mainly by protecting the hardest and rarest decision.
 
 \paragraph{A caution on the aggregate Arabic gap.}
-The mean English-to-Arabic macro-F1 drop is $-0.0098$ for invariance-trained models against $-0.0311$
-for standard fine-tuning, a difference of roughly threefold in the expected direction. We note,
-however, that this particular comparison does \emph{not} reach statistical significance
+The mean English-to-Arabic macro-F1 drop is $-0.0098$ for invariance-trained models and $-0.0311$
+for standard fine-tuning. The difference is roughly threefold in the expected direction. However,
+this comparison does \emph{not} reach statistical significance
 (Welch $p = 0.089$; Mann--Whitney $p = 0.231$), because the per-configuration variance in the gap is
-large relative to $n$. The direction is consistent across families and settings and is corroborated by
-the class-level analysis above, but it should be reported as a consistent trend rather than an
-established effect. This contrasts with the ranking-stability result, which is unambiguous.
+large relative to the sample size. The pattern is consistent across model families and settings, and
+the class-level analysis supports it. Nevertheless, it should be described as a trend rather than an
+established effect. The ranking-stability result, by contrast, is unambiguous.
 
 \subsection{Ablations}
 \label{subsec:res-ablations}
@@ -276,16 +261,15 @@ established effect. This contrasts with the ranking-stability result, which is u
 \paragraph{The invariance weight.}
 Figure~\ref{fig:results-lambda} sweeps the target invariance weight $\lambda^\star$ over
 $\{0.1, 0.2, 0.3\}$ for both backbones. Cross-lingual stability increases monotonically with
-$\lambda^\star$ for both families---Llama from $0.5711$ to $0.6440$ and Qwen from $0.5820$ to
-$0.6426$---which is the expected behaviour of a regularizer whose strength is being increased. Mean
-macro-F1 does not follow: it peaks at $\lambda^\star = 0.2$ for Llama ($0.6180$, against $0.6146$ and
-$0.6116$ at $0.1$ and $0.3$) and declines slightly but monotonically for Qwen ($0.6182 \to 0.6173 \to
-0.6152$). Recall@5 behaves like macro-F1 rather than like $\tau$, peaking at $\lambda^\star = 0.2$ for
-both backbones. The sweep therefore
-exposes a mild trade-off rather than a free lunch, and $\lambda^\star = 0.2$ is the setting that
-balances the two. It should be stressed that the entire swept range remains far above the
-non-invariance population on stability, so the choice of $\lambda^\star$ within this range is much less
-consequential than the decision to use the objective at all.
+$\lambda^\star$ for both model families. It rises from $0.5711$ to $0.6440$ for Llama and from
+$0.5820$ to $0.6426$ for Qwen. This is the expected result of increasing the regulariser strength.
+Mean macro-F1 does not increase in the same way. For Llama, it peaks at $\lambda^\star = 0.2$
+($0.6180$, compared with $0.6146$ at $0.1$ and $0.6116$ at $0.3$). For Qwen, it declines slightly
+from $0.6182$ to $0.6173$ and then $0.6152$. Recall@5 follows macro-F1 rather than $\tau$ and peaks at
+$\lambda^\star = 0.2$ for both backbones. The sweep therefore shows a mild trade-off between task
+quality and consistency. The value $\lambda^\star = 0.2$ provides the best balance. All tested values
+still produce much greater stability than the non-invariance systems, so using the objective matters
+more than the exact weight chosen within this range.
 
 \begin{figure}[htbp]
   \centering
@@ -297,140 +281,132 @@ consequential than the decision to use the objective at all.
   \label{fig:results-lambda}
 \end{figure}
 
-\paragraph{Numeric normalization does not combine with invariance training.}
-Plain-text numeric normalization was carried over from the shared-task system as a complementary lever
+\paragraph{Numeric normalisation does not combine with invariance training.}
+Plain-text numeric normalisation was carried over from the shared-task system as a complementary method
 for the numerical dimension of the task (Section~\ref{subsec:method-numeric}). Within the
 invariance-trained group it does not help. Configurations combining the two reach $\tau = 0.5121$ and
 mean macro-F1 $0.6133$, against $\tau = 0.5910$ and $0.6154$ for invariance training alone: adding
-numeric normalization costs $0.079$ Kendall $\tau$ and buys no accuracy, and the same pattern holds in
-Arabic ($0.6028$ against $0.6111$). Outside the invariance group the picture is different---among
-standard fine-tunes, numeric normalization is mildly positive in English and Spanish---so the two
-interventions appear to be partially redundant rather than individually useless. A plausible reading is
-that both mechanisms address the same underlying problem: numeric normalization canonicalizes numerals
-so that they are represented identically across scripts, which is one of the specific ways the
-invariance objective already forces scores to agree. Once the score-level constraint is imposed,
-restating canonical values in the input adds input length without adding signal. On this evidence, the
-two should not be combined.
+numeric normalisation reduces Kendall $\tau$ by $0.079$ and does not improve accuracy. The same
+pattern appears in Arabic ($0.6028$ compared with $0.6111$). Outside the invariance group, the result
+is different: numeric normalisation gives a small improvement to standard fine-tunes in English and
+Spanish. The two methods therefore seem partly redundant rather than individually ineffective. Both
+address the fact that the same quantity can be represented differently across scripts. The invariance
+objective already forces scores for these forms to agree, so adding canonical values to the input may
+increase its length without providing new information. The evidence does not support combining the
+two methods.
 
 \paragraph{Backbone families.}
-Pooling all settings, Qwen3-8B and Llama-3.1-8B are level on accuracy (mean macro-F1 $0.6128$ against
-$0.6083$) but Qwen is noticeably more stable cross-lingually ($\tau = 0.4505$ against $0.3161$;
-Fleiss $\kappa = 0.9353$ against $0.9195$). Mistral-7B trails on both dimensions ($0.5843$ and
-$0.1197$), confirming the earlier decision to retain it as a reference point rather than extend it with
-the invariance objective. The strongest individual results are split: \emph{Llama, reg.} attains the
-best English macro-F1 ($0.6263$) and Recall@5 ($0.2710$), \emph{Llama, inv.\ $\lambda^\star$=0.2} the
-best Arabic macro-F1 ($0.6161$), and \emph{Llama, inv.\ $\lambda^\star$=0.3} the best ranking stability
-($\tau = 0.6440$). That no single configuration wins on every axis is itself consistent with the
-accuracy/stability distinction drawn in Section~\ref{subsec:res-invariance}.
+Across all settings, Qwen3-8B and Llama-3.1-8B have similar accuracy: their mean macro-F1 scores are
+$0.6128$ and $0.6083$, respectively. Qwen is more stable across languages, with $\tau = 0.4505$
+compared with $0.3161$ and Fleiss $\kappa = 0.9353$ compared with $0.9195$. Mistral-7B is weaker on
+both dimensions ($0.5843$ and $0.1197$), supporting the decision to keep it as a reference rather
+than extend it with the invariance objective. No single configuration is best on every measure.
+\emph{Llama, reg.} has the best English macro-F1 ($0.6263$) and Recall@5 ($0.2710$).
+\emph{Llama, inv.\ $\lambda^\star$=0.2} has the best Arabic macro-F1 ($0.6161$), while
+\emph{Llama, inv.\ $\lambda^\star$=0.3} has the best ranking stability ($\tau = 0.6440$). This split
+again shows why accuracy and stability must be considered separately.
 
 \subsection{The Relationship Between Invariance and Reasoning Quality (RQ2)}
 \label{subsec:res-relationship}
 
-RQ2 asks how language invariance relates to reasoning quality. Because the two were measured
-independently, the relationship can be examined empirically. Throughout this section we quantify
-reasoning quality by \emph{mean macro-F1}, the claim-verdict macro-F1 averaged over the three
-languages, and we report the ranking metric separately rather than folding both into a single notion
-of ``accuracy'', because---as the numbers below show---the two behave differently.
+For RQ2, we examine language invariance and reasoning quality as separate properties. This lets us
+study their relationship directly. Here, \emph{mean macro-F1} represents
+reasoning quality. It is the claim-verdict macro-F1 averaged across the three languages. We report
+Recall@5 separately because verdict quality and ranking quality behave differently.
 
 Over the $28$ configurations, mean macro-F1 correlates with Kendall $\tau$ at $r = 0.60$ and with
 Fleiss $\kappa$ at $r = 0.57$. The corresponding correlations for the ranking metric are weaker:
 mean Recall@5 correlates with $\tau$ at only $r = 0.39$ (English Recall@5 alone, $r = 0.49$), while
-still correlating with $\kappa$ at $r = 0.57$. The association between quality and consistency is
-therefore positive and moderate, as the thesis premise anticipated, but it holds mainly for verdict
-quality; how much relevant evidence a model retrieves into its top five says comparatively little
-about whether it retrieves the same evidence in another language.
+its correlation with $\kappa$ is $r = 0.57$. Quality and consistency therefore have a positive but
+moderate relationship, mainly for verdict quality. The amount of relevant evidence in the top five
+says relatively little about whether the model retrieves the same evidence in another language.
 
-The association is, however, far from deterministic, and Figure~\ref{fig:results-tradeoff} makes the
-residual visible. At essentially identical mean macro-F1 (around $0.61$--$0.62$) the configurations
-span $\tau$ from $0.08$ to $0.64$---a range of more than $0.5$ at fixed verdict quality. Mean macro-F1
-consequently predicts stability only weakly, and the two properties are separable in practice as well
-as in principle. This is the empirical confirmation, in a ranking setting, of the decoupling that the
-consistency literature established for factual
-prediction~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}: one cannot infer that a
-more accurate multilingual model is a more consistent one, and improving task quality is not a route
-to consistency.
+The relationship is not deterministic. Figure~\ref{fig:results-tradeoff} shows that configurations
+with nearly identical mean macro-F1 ($0.61$--$0.62$) span $\tau$ values from $0.08$ to $0.64$. Thus,
+at almost fixed verdict quality, stability varies by more than $0.5$. Mean macro-F1 is therefore a
+weak predictor of stability, and the two properties are separate in practice as well as in principle.
+This confirms in a ranking setting what prior work found for factual
+prediction~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}: a more accurate
+multilingual model is not necessarily more consistent, and improving task quality alone does not
+ensure consistency.
 
-A second relationship is worth recording. Fleiss $\kappa$ and Kendall $\tau$ correlate at $r = 0.83$
-across configurations, so the two consistency families are related---but, as
-Section~\ref{subsec:res-consistency} showed, $\kappa$ is compressed into a narrow high band while
-$\tau$ is not. A high correlation between two measures does not make them interchangeable when one has
-far less dynamic range than the other.
+Fleiss $\kappa$ and Kendall $\tau$ correlate at $r = 0.83$ across configurations, so verdict and
+ranking consistency are related. However, Section~\ref{subsec:res-consistency} showed that $\kappa$
+is compressed into a narrow high range while $\tau$ varies widely. The measures are therefore not
+interchangeable, despite their high correlation.
 
 \subsection{Threats to Validity}
 \label{subsec:res-threats}
 
 \paragraph{Context-budget confound.}
-The most important qualification concerns training context. The invariance-trained models were trained
-with a reduced context budget, because the aligned trilingual batching required for the objective
-multiplies the sequence count per optimization step and the available compute did not permit the full
-long-context configuration. Several of the standard fine-tunes, by contrast, used the full budget.
-Training condition and context budget are therefore partially entangled, and the comparison is not a
-controlled ablation.
+The most important limitation concerns the training context. The invariance-trained models used a
+smaller context budget because aligned trilingual batching multiplies the number of sequences in each
+optimisation step. The available compute did not support the full long-context setting. Several
+standard fine-tunes used the full context budget. Training method and context budget are therefore
+partly entangled, so this is not a fully controlled comparison.
 
-Two considerations limit the damage. First, the direction of the confound is conservative: the
-invariance arm is the handicapped one, so its wins are lower bounds. Second, the size of the context
-effect can be estimated from configurations that were run at both budgets. Moving the same
-architectures from the reduced to the full budget changes English macro-F1 by $+0.0052$, Spanish by
-$+0.0043$, and Arabic by $-0.0053$, for a net change of $+0.0014$ on the three-language mean---smaller
-than the invariance effect and not even consistent in sign across languages. Restricting the
-comparison to the matched reduced-budget condition, the invariance-trained models still exceed the
-short-context fine-tunes by $+0.0083$ mean macro-F1, $+0.0197$ Arabic macro-F1, and a factor of $4.85$
-on Kendall $\tau$. No invariance-trained configuration was run at the full context budget; that single
-run would resolve the confound and is the most valuable next experiment. We therefore state the claim
-in the guarded form that the evidence supports:
+Two observations reduce the concern. First, the confound works against the invariance-trained models,
+which use the smaller context budget. Their gains are therefore conservative estimates. Second, we
+can estimate the context effect from architectures tested at both budgets. Moving from the reduced to
+the full budget changes macro-F1 by $+0.0052$ in English, $+0.0043$ in Spanish, and $-0.0053$ in
+Arabic. The mean change is only $+0.0014$, which is smaller than the invariance effect and does not
+even have the same direction in every language. Under the matched reduced-budget comparison,
+invariance-trained models still improve mean macro-F1 by $+0.0083$, Arabic macro-F1 by $+0.0197$,
+and Kendall $\tau$ by a factor of $4.85$. No invariance-trained configuration was tested with the
+full context budget. That experiment would resolve the confound and is the most important next step.
+The evidence therefore supports the following guarded claim:
 \emph{invariance training at a reduced context budget matches or exceeds full-context fine-tuning on
 mean macro-F1, and dominates it on cross-lingual stability}. The stability result is
-unaffected by the confound, since no plausible context effect of the magnitude estimated here could
+unlikely to be explained by this confound because the estimated context effect is far too small to
 produce a fourfold change in $\tau$.
 
 \paragraph{Small comparison arms.}
-The matched-budget comparison rests on only two short-context fine-tunes (one Llama, one Qwen), and the
-full-budget arm has seven configurations. The group means are correspondingly imprecise, and the
-Spanish result is an explicit exception to the general pattern: \emph{Llama, short context} reaches
-$0.6220$ Spanish macro-F1, above all $13$ invariance-trained configurations. We do not claim a Spanish
-improvement. The defensible summary is parity on English and Spanish, a gain on Arabic, and a large gain
-on cross-lingual stability.
+The matched-budget comparison contains only two short-context fine-tunes, one Llama and one Qwen. The
+full-budget group contains seven configurations. The group means are therefore imprecise. Spanish is
+also a clear exception to the general pattern: \emph{Llama, short context} reaches $0.6220$ Spanish
+macro-F1, above all $13$ invariance-trained configurations. We therefore do not claim an improvement
+for Spanish. The supported conclusion is parity in English and Spanish, an improvement in Arabic,
+and a large improvement in cross-lingual stability.
 
 \paragraph{Behavioural, not representational, evidence.}
-Finally, all invariance measures reported here are behavioural: they compare outputs across languages.
-As noted in Section~\ref{subsec:bg-multilingual}, agreement of outputs does not establish that the model
-represents the underlying knowledge in a shared way~\cite{ifergan2024beneathsurfaceconsistencyexploring}.
-Our results show that the objective changes what the model \emph{does} across languages; they do not
-establish what it has changed internally.
+All invariance measures in this study are behavioural: they compare model outputs across languages.
+As noted in Section~\ref{subsec:bg-multilingual}, matching outputs do not prove that the model stores or
+processes the underlying knowledge in the same way~\cite{ifergan2024beneathsurfaceconsistencyexploring}.
+The results show that the objective changes what the model \emph{does} across languages, but not what
+changes inside the model.
 
 \subsection{Summary of Findings}
 \label{subsec:res-summary}
 
 \begin{description}
-\item[RQ1 --- Does optimizing for language-invariant reasoning improve ranking performance?]
-Partly, and in a specific sense. On the official ranking metric the objective changes nothing: mean
+\item[\textbf{RQ1}] \textbf{Does optimising for language-invariant reasoning improve ranking
+performance?} Not on the official ranking metric. Mean
 Recall@5 is $0.2656$ for invariance training against $0.2679$ for standard fine-tuning, and the best
 Recall@5 in the study ($0.2710$) belongs to a standard fine-tune. What it does produce is a fourfold,
 fully separated improvement in the cross-lingual stability of the ranking
-($\tau = 0.567$ against $0.131$, $d = 6.09$), together with a small but consistent gain in verdict
-quality ($0.6148$ against $0.5977$ mean macro-F1). Ranking quality measured per language is essentially unchanged; ranking
-\emph{consistency} across languages is transformed.
+($\tau = 0.567$ compared with $0.131$, $d = 6.09$). It also produces a small but consistent gain in
+verdict quality ($0.6148$ compared with $0.5977$ mean macro-F1). Per-language ranking quality remains
+essentially unchanged, but ranking \emph{consistency} across languages improves substantially.
 
-\item[RQ2 --- What is the relationship between language invariance and reasoning quality?]
-Positive but moderate and clearly non-deterministic. Mean macro-F1---verdict quality averaged over the
-three languages---correlates with ranking stability (Kendall $\tau$) at $r=0.60$ and with verdict
-agreement (Fleiss $\kappa$) at $r=0.57$; the ranking metric is a weaker predictor still, with mean
-Recall@5 correlating with $\tau$ at only $r=0.39$. Yet at fixed mean macro-F1 the observed stability
-spans a range of more than $0.5$ in $\tau$. Consistency is not a by-product of task quality, and the
-two must be measured separately---a conclusion reinforced by the random baseline, which is perfectly
-invariant and entirely uninformative.
+\item[\textbf{RQ2}] \textbf{What is the relationship between language invariance and reasoning
+quality?} The relationship is positive but moderate. Mean macro-F1, which represents verdict quality across the
+three languages, correlates with ranking stability at $r=0.60$ and with verdict agreement at $r=0.57$.
+Mean Recall@5 is a weaker predictor, correlating with $\tau$ at only $r=0.39$. Even at almost fixed
+mean macro-F1, stability varies by more than $0.5$ in $\tau$. Consistency is therefore not a
+by-product of task quality, and the two must be measured separately. The random baseline reinforces
+this conclusion because it is perfectly invariant but uninformative.
 
-\item[RQ3 --- Can language-invariant training objectives lead to more robust multilingual reasoning
-models?] Yes, with the qualifications above. The gains are concentrated where robustness is most needed:
-in Arabic, the different-script and least well-represented of the three languages, and within Arabic in
-the minority \textsf{Conflicting} class, where standard fine-tuning degrades several times more than
-invariance training. The effect holds across both Llama and Qwen backbones, indicating a property of
-the method rather than of a single model family, and it is obtained under a reduced training-context
-budget.
+\item[\textbf{RQ3}] \textbf{Can language-invariant training objectives lead to more robust
+multilingual reasoning models?} Yes, with the qualifications above. The gains are concentrated where
+robustness is most needed:
+in Arabic, which uses a different script and is the least well-represented of the three languages. In
+Arabic, the gain is concentrated in the minority \textsf{Conflicting} class, where standard
+fine-tuning degrades several times more than invariance training. The effect appears with both Llama
+and Qwen, suggesting that it comes from the method rather than one model family. It is also achieved
+with a reduced training-context budget.
 \end{description}
 
-A final observation cuts across all three questions. Standard multilingual fine-tuning already produces
-models that agree on the verdict in every language; what it does not produce is models that agree on
-\emph{why}. The contribution of the invariance objective is to align the evidence, not the label---and
-because that difference is invisible to verdict-level agreement statistics, it would have gone unmeasured
-under the evaluation protocol most commonly used in this literature.
+One observation connects all three questions. Standard multilingual fine-tuning already produces
+models that usually agree on the verdict across languages. It does not produce models that agree on
+\emph{why}. The invariance objective mainly aligns the evidence, not the final label. Verdict-level
+agreement cannot reveal this difference, so a standard evaluation protocol would have missed it.

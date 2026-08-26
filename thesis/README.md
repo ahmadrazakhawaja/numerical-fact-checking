@@ -14,11 +14,12 @@ thesis/
 ├── Makefile
 ├── chapters/
 │   ├── titlepage.tex
-│   ├── introduction.tex     (currently commented out in 00_main.tex)
+│   ├── introduction.tex
 │   ├── related_work.tex
 │   ├── background.tex
 │   ├── methodology.tex
 │   ├── results.tex
+│   ├── conclusion.tex
 │   └── appendix.tex         # full per-model result tables
 ├── tables/
 │   ├── table-results-summary.tex       # condensed table, used in the body

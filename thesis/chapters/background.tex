@@ -8,94 +8,75 @@
 \section{Background}
 \label{sec:background}
 
-This section introduces the concepts and terminology that the rest of the thesis assumes. It is
-written for a reader who is comfortable with general machine learning but not necessarily with large
-language models, fact-checking, ranking, multilingual evaluation, or the numerical and statistical
-tools we use. We begin with large language models and how they are adapted to downstream tasks, then
-describe text ranking and the basic classification machinery on which our system is built. We then
-introduce automated fact-checking and the specific numerical-claim-verification task studied here,
-followed by the multilingual notions of cross-lingual transfer and language invariance that motivate
-the thesis, a short treatment of numerical reasoning in language models, and finally the evaluation
-metrics and agreement statistics used throughout. Readers already familiar with a given topic can
-safely skip the corresponding subsection; the later sections cross-reference the definitions
-established here.
+This section introduces the concepts and terminology used throughout the thesis. It assumes general
+machine-learning knowledge but not prior familiarity with LLMs, fact-checking, ranking, multilingual
+evaluation, or the metrics used here. We first explain language models and their adaptation to a task.
+We then introduce text ranking, binary classification, numerical fact-checking, cross-lingual
+consistency, and numerical reasoning. The section ends with the task and agreement metrics used in
+the experiments.
 
 \subsection{Large Language Models}
 \label{subsec:bg-llm}
 
-A \emph{large language model} (LLM) is a neural network trained to model the probability of natural
-language text. Modern LLMs are built on the \emph{Transformer} architecture~\cite{vaswani2017attention} and are
-typically \emph{decoder-only}: they are trained by \emph{next-token prediction}, that is, to predict
-the next unit of text given all the preceding units. Formally, for a sequence of tokens $x_1,\dots,x_T$ the
-model factorizes the joint probability as $\prod_{t=1}^{T} p_\theta(x_t \mid x_{<t})$ and is optimized
-to maximize this likelihood over a very large corpus. After this \emph{pre-training} stage the model
-has absorbed broad linguistic and world knowledge, which can then be steered toward specific tasks.
+A \emph{large language model} (LLM) is a neural network that models the probability of natural-language
+text. Modern LLMs are usually decoder-only Transformers~\cite{vaswani2017attention}. They learn by
+\emph{next-token prediction}: given the preceding tokens, the model predicts the next one. For a
+sequence $x_1,\dots,x_T$, the joint probability is
+$\prod_{t=1}^{T} p_\theta(x_t \mid x_{<t})$. During \emph{pre-training}, the model maximises this
+likelihood over a large text corpus. The resulting linguistic and world knowledge can then be adapted
+to specific tasks.
 
-\paragraph{Tokens and tokenization.}
-LLMs do not operate on characters or whole words but on \emph{tokens}: sub-word units produced by a
-\emph{tokenizer}. A tokenizer is learned on the pre-training corpus and splits text into frequent
-fragments, so that common words become single tokens while rare words are broken into several pieces.
-This \emph{subword} scheme---most commonly byte-pair encoding~\cite{sennrich2016bpe}---keeps the
-vocabulary finite while still being able to represent any string.
-Tokenization is not a neutral detail for this thesis: the way a tokenizer splits numbers and
-non-Latin scripts directly affects how well a model can reason about quantities across languages, as
-discussed in Section~\ref{subsec:bg-numeracy}.
+\paragraph{Tokens and tokenisation.}
+LLMs process \emph{tokens}, which are subword units produced by a \emph{tokeniser}. The tokeniser is
+learned from the pre-training corpus. Common words may form one token, while rare words are split into
+several pieces. This scheme, often based on byte-pair encoding~\cite{sennrich2016bpe}, keeps the
+vocabulary finite while representing any string. Tokenisation matters here because numbers and
+non-Latin scripts may be split differently, which can affect numerical reasoning across languages
+(Section~\ref{subsec:bg-numeracy}).
 
 \paragraph{Instruction tuning.}
-A raw pre-trained model predicts plausible continuations but does not reliably follow instructions.
-\emph{Instruction tuning} is a further training stage in which the model is fine-tuned on
-(instruction, response) examples so that it learns to carry out tasks phrased as natural-language
-requests. The resulting \emph{instruction-tuned} models---for example
+A raw pre-trained model predicts plausible continuations but may not follow instructions reliably.
+\emph{Instruction tuning} fine-tunes it on instruction--response examples. The resulting models can
+follow natural-language requests. The three instruction-tuned \emph{backbones} used here are
 Mistral-7B-Instruct~\cite{jiang2023mistral7b}, Llama-3.1-8B-Instruct~\cite{llama31instruct}, and
-Qwen3-8B~\cite{qwen3technicalreport}, the three \emph{backbones} used in this thesis---can be prompted
-to rank items, classify text, or answer questions without any task-specific training. The number in
-each name (7B, 8B) refers to the count of trainable parameters in billions, which is one rough proxy
-for model capacity.
+Qwen3-8B~\cite{qwen3technicalreport}. They can rank items, classify text, or answer questions without
+task-specific training. The numbers 7B and 8B indicate billions of parameters, a rough measure of
+model capacity.
 
 \subsection{Adapting Language Models to a Task}
 \label{subsec:bg-adapt}
 
-There are two broad ways to make an LLM perform a particular task: \emph{prompt} it without changing
-its weights, or \emph{fine-tune} some or all of its weights on task data. The thesis uses both, so we
-introduce each.
+An LLM can be adapted to a task in two broad ways. \emph{Prompting} leaves its weights unchanged,
+whereas \emph{fine-tuning} updates some or all of them. This thesis uses both approaches.
 
 \paragraph{Prompting and in-context learning.}
-In \emph{zero-shot} prompting the model is simply given an instruction and the input, and asked to
-produce the output; in \emph{few-shot} prompting the prompt additionally contains a handful of solved
-examples, from which the model infers the pattern---a behaviour known as \emph{in-context learning}.
-Prompting requires no training and no gradient updates, which makes it a natural \emph{baseline}, but
-its behaviour is sensitive to the exact wording and formatting of the prompt.
+In \emph{zero-shot} prompting, the model receives only an instruction and the input. \emph{Few-shot}
+prompting also provides several solved examples, allowing the model to infer the pattern through
+\emph{in-context learning}. Prompting requires no gradient updates and is therefore a natural
+baseline. However, its output can be sensitive to wording and formatting.
 
 \paragraph{Chain-of-thought reasoning.}
-A particularly important prompting technique for this thesis is \emph{chain-of-thought} (CoT)
-prompting, in which the model is encouraged to produce a sequence of intermediate reasoning steps
-before committing to its final answer, rather than emitting the answer directly~\cite{WeiWSB23}.
-Making the reasoning explicit in this way substantially improves performance on tasks that require
-multiple steps, such as arithmetic and multi-hop questions, and it also makes the model's reasoning
-inspectable. Chain-of-thought is directly relevant here because the ``reasoning traces'' that our task
-asks a system to rank (Section~\ref{subsec:bg-factcheck}) are exactly such chains of thought: each
-trace is a step-by-step argument, generated by a language model, that works through a claim and its
-evidence and ends in a proposed verdict. The thesis does not generate these traces; it takes them as
-given and studies how to \emph{select} and \emph{rank} the most reliable ones.
+\emph{Chain-of-thought} (CoT) prompting asks the model to produce intermediate reasoning steps before
+its final answer~\cite{WeiWSB23}. This often improves multi-step tasks such as arithmetic and
+multi-hop questions, while making the reasoning inspectable. The ``reasoning traces'' in this thesis
+are such chains of thought: each is a step-by-step argument over a claim and its evidence that ends in
+a proposed verdict. The task provides these traces. This thesis studies how to select and rank them,
+not how to generate them.
 
 \paragraph{Full fine-tuning versus parameter-efficient fine-tuning.}
-\emph{Fine-tuning} continues training the model on labelled task data. Updating all parameters of a
-7--8B model (\emph{full fine-tuning}) is expensive in memory and compute. \emph{Parameter-efficient
-fine-tuning} (PEFT) instead freezes the pre-trained weights and trains only a small number of new
-parameters. The most common PEFT method is \emph{Low-Rank Adaptation}
-(LoRA)~\cite{hu2021loralowrankadaptationlarge}: for each adapted weight matrix, LoRA learns a pair of
-small low-rank matrices whose product is added to the frozen weight, so that only these compact
-\emph{adapters} are trained. The number of trainable parameters is controlled by the adapter
-\emph{rank} $r$, and the update is scaled by a factor $\alpha$.
+\emph{Fine-tuning} continues training on labelled task data. Updating every parameter of a 7--8B
+model is expensive. \emph{Parameter-efficient fine-tuning} (PEFT) instead freezes the pre-trained
+weights and trains a small set of new parameters. Low-Rank Adaptation
+(LoRA)~\cite{hu2021loralowrankadaptationlarge} learns two small low-rank matrices for each adapted
+weight matrix. Their product is added to the frozen weight. Only these \emph{adapters} are trained.
+The adapter rank $r$ controls the number of trainable parameters, and $\alpha$ scales the update.
 
-\paragraph{Quantization and QLoRA.}
-\emph{Quantization} stores model weights at lower numerical precision (for example 4~bits instead of
-16 or 32) to reduce memory. \emph{Quantized LoRA} (QLoRA)~\cite{dettmers2023qloraefficientfinetuningquantized}
-combines the two ideas: the frozen base model is loaded in 4-bit precision while the LoRA adapters are
-trained on top of it in higher precision. This makes it feasible to fine-tune models with billions of
-parameters on a modest GPU budget, which is the regime in which our experiments operate.
-Figure~\ref{fig:lora-qlora} illustrates how the low-rank adapters are added alongside the frozen
-weights.
+\paragraph{Quantisation and QLoRA.}
+\emph{Quantisation} stores weights at lower precision, such as 4~bits instead of 16 or 32, to reduce
+memory use. QLoRA~\cite{dettmers2023qloraefficientfinetuningquantized} loads the frozen base model at
+4-bit precision and trains higher-precision LoRA adapters on top. This makes billion-parameter
+fine-tuning feasible within the available GPU budget. Figure~\ref{fig:lora-qlora} illustrates the
+setup.
 
 \begin{figure}[htbp]
   \centering
@@ -107,23 +88,20 @@ weights.
   \label{fig:lora-qlora}
 \end{figure}
 
-\paragraph{Preference optimization.}
-Beyond supervised fine-tuning, models can be trained from \emph{preferences}: pairs of a preferred and
-a rejected output for the same input. \emph{Reinforcement Learning from Human Feedback} (RLHF) was the
-original approach, but it is complex because it requires training a separate reward model and running
-reinforcement learning. \emph{Direct Preference Optimization}
-(DPO)~\cite{rafailov2024directpreferenceoptimizationlanguage} achieves a similar effect more simply: it
-directly adjusts the model to raise the likelihood of preferred outputs relative to rejected ones,
-while staying close to a reference model, without an explicit reward model or reinforcement learning.
-The thesis uses DPO as one of its ranking baselines.
+\paragraph{Preference optimisation.}
+Models can also learn from \emph{preferences}: a preferred and a rejected output for the same input.
+Reinforcement Learning from Human Feedback (RLHF) requires a separate reward model and reinforcement
+learning. Direct Preference Optimization (DPO) provides a simpler alternative
+\cite{rafailov2024directpreferenceoptimizationlanguage}. It increases the likelihood of preferred
+outputs relative to rejected ones while keeping the model close to a reference model. This thesis
+uses DPO as a ranking baseline.
 
 \subsection{Text Ranking with Language Models}
 \label{subsec:bg-ranking}
 
-\emph{Ranking} is the task of ordering a set of candidate items by how well they satisfy some
-criterion; the closely related task of \emph{re-ranking} reorders an already-retrieved candidate set.
-LLMs can be used as rankers in three standard formulations, which differ in how many candidates the
-model sees at once; Figure~\ref{fig:ranking-formulations} contrasts them.
+\emph{Ranking} orders candidate items by how well they satisfy a criterion. \emph{Re-ranking} applies
+this process to an already retrieved candidate set. LLM rankers use three common formulations, which
+differ in how many candidates the model sees at once (Figure~\ref{fig:ranking-formulations}).
 
 \begin{itemize}
 \item \textbf{Pointwise.} Each candidate is scored independently, and the ranking is obtained by
@@ -149,71 +127,49 @@ order in which candidates are listed~\cite{liu-etal-2025-lipo}.
 \end{figure}
 
 \paragraph{LLM-as-a-judge and presentation bias.}
-When an LLM is used to \emph{evaluate} or compare candidates, the setting is often called
-\emph{LLM-as-a-judge}. A recurring problem is that such judgments are influenced by factors unrelated
-to content quality. \emph{Positional} (or \emph{position}) bias is the tendency to prefer a candidate
-because of \emph{where} it appears in the prompt rather than \emph{what} it says; related effects
-include verbosity bias and sensitivity to prompt
+Using an LLM to evaluate candidates is often called \emph{LLM-as-a-judge}. Such judgments can depend
+on factors unrelated to content quality. \emph{Position bias} favours a candidate because of where it
+appears in the prompt. Related effects include verbosity bias and sensitivity to prompt
 format~\cite{shi2025judgingjudgessystematicstudy,qiao2026llmbasedlistwisererankingeffect}. These
-biases matter for ranking because they can determine which candidate is chosen independently of its
-actual reliability, and they are one reason the thesis moves from generative ranking toward
-independently scored candidates.
+biases motivate the move from generative ranking to independently scored candidates.
 
 \subsection{Classification and Training Objectives}
 \label{subsec:bg-classification}
 
-Our system reformulates ranking as \emph{binary classification}, so we recall the relevant basics. A
-classifier maps an input to one or more real-valued \emph{logits}. For \emph{binary} classification
-one can use a single logit $\ell$ passed through the \emph{sigmoid} function
-$\sigma(\ell) = 1/(1+e^{-\ell})$ to produce a probability, or two logits
-$(\ell^{\text{neg}}, \ell^{\text{pos}})$ passed through the \emph{softmax} function, which normalizes a
-vector of logits into a probability distribution. The model is trained by minimizing a \emph{loss}
-that penalizes disagreement between the predicted probability and the true label; for classification
-this is the \emph{cross-entropy} loss (its two-class special case is \emph{binary cross-entropy}). The
-higher the probability the model assigns to the positive class, the higher we can consider its
-\emph{score} for that input, and this score is exactly what we later sort on to obtain a ranking.
-A \emph{classification head} is the small final layer that turns the model's internal representation
-of an input into these logits.
+Our system reformulates ranking as \emph{binary classification}. A classifier maps an input to one or
+more real-valued \emph{logits}. Binary classification can use one logit $\ell$ with the sigmoid
+function $\sigma(\ell) = 1/(1+e^{-\ell})$, or two logits
+$(\ell^{\text{neg}}, \ell^{\text{pos}})$ with softmax. Both produce a probability for the positive
+class. Training minimises cross-entropy between this probability and the true label; the one-logit
+case uses binary cross-entropy. The positive-class probability becomes the relevance score used for
+ranking. A small \emph{classification head} converts the model's internal representation into the
+required logits.
 
 \subsection{Automated Fact-Checking and Numerical Claim Verification}
 \label{subsec:bg-factcheck}
 
-\emph{Automated fact-checking} is the task of assessing whether a \emph{claim}---a statement that can
-be true or false---is supported by evidence. The step that assigns a truth value to a claim given
-evidence is called \emph{claim verification} (or veracity prediction), and it is the part of the
-fact-checking pipeline this thesis is concerned with. It is worth distinguishing it from the earlier
-stages of a full fact-checking system, which typically also include \emph{claim detection} (deciding
-which sentences are checkworthy claims) and \emph{evidence retrieval} (finding documents relevant to a
-claim); we take claim detection as already done and focus on verification given retrieved
-evidence~\cite{sahitaj2025automatedfactcheckingrealworldclaims}.
+\emph{Automated fact-checking} assesses whether evidence supports a claim. A full pipeline usually
+includes \emph{claim detection}, \emph{evidence retrieval}, and \emph{claim verification}. The first
+step identifies checkworthy claims, the second finds relevant documents, and the third assigns a
+veracity label from the evidence. This thesis assumes that claim detection and retrieval are complete
+and focuses on verification~\cite{sahitaj2025automatedfactcheckingrealworldclaims}.
 
 \paragraph{Core components: claims, evidence, and verdicts.}
-A verification example has three core components. The \emph{claim} is the statement to be checked. The
-\emph{evidence} is a set of retrieved text snippets---the output of a \emph{retrieval} step that
-searches a document collection for material relevant to the claim---against which the claim is
-assessed; in this thesis the evidence is provided with each example, so we do not perform retrieval
-ourselves. The \emph{verdict} (also called a veracity label) is the categorical outcome describing the
-claim's relationship to the evidence, drawn here from the label space \textsf{True}, \textsf{False},
-and \textsf{Conflicting}. In our specific task a fourth component is added on top of these: a set of
-candidate \emph{reasoning traces} (chains of thought, in the sense of
-Section~\ref{subsec:bg-adapt}), each carrying its own proposed verdict, which the system must rank.
-\emph{Numerical claims} are claims whose truth hinges on quantities---counts, dates, percentages,
-rankings, or comparisons---and they are especially demanding, because a small change in a number, a
-unit, or the scope of a comparison can flip the verdict~\cite{v2024quantemprealworldopendomainbenchmark}.
+A verification example contains a \emph{claim}, retrieved \emph{evidence}, and a \emph{verdict}. The
+verdict describes the relationship between claim and evidence and is one of \textsf{True},
+\textsf{False}, or \textsf{Conflicting}. The task adds a fourth component: candidate reasoning traces,
+each with its own proposed verdict, which the system must rank. A \emph{numerical claim} depends on
+quantities such as counts, dates, percentages, rankings, or comparisons. Small changes in a value,
+unit, or comparison scope can reverse its verdict~\cite{v2024quantemprealworldopendomainbenchmark}.
 
 \paragraph{Reasoning traces and verifier-guided verification.}
-A recent approach to hard verification problems is \emph{test-time scaling}: instead of producing a
-single answer, the model generates several independent \emph{reasoning traces}---step-by-step
-chains of reasoning, each ending in a proposed verdict---and a separate component decides which traces
-to trust~\cite{chungkham2025thinkrightmoretesttime}. The component that selects or ranks traces is a
-\emph{verifier}, and the overall setup is \emph{verifier-guided}. The task studied in this thesis
-follows exactly this shape: for each claim it provides evidence and a set of candidate reasoning
-traces with their per-trace verdicts, and a system must (i) \emph{rank} the traces by how useful they
-are for reaching the correct answer and (ii) derive a final \emph{claim-level verdict}, typically from
-the highest-ranked traces. Because the traces are given and only their ranking and aggregation are
-learned, the task is best seen as a ranking-and-aggregation problem rather than free-form reasoning.
-Figure~\ref{fig:factcheck-pipeline} shows the full pipeline and marks which parts are provided by the
-task and which are learned in this thesis.
+\emph{Test-time scaling} generates several independent reasoning traces instead of one answer. A
+separate \emph{verifier} selects which traces to trust
+\cite{chungkham2025thinkrightmoretesttime}. The task studied here follows this verifier-guided setup.
+It provides the claim, evidence, traces, and per-trace verdicts. The system ranks the traces and then
+derives a claim-level verdict from the highest-ranked ones. Because trace generation is outside the
+system, this is a ranking-and-aggregation task rather than free-form reasoning.
+Figure~\ref{fig:factcheck-pipeline} shows the complete pipeline.
 
 \begin{figure}[htbp]
   \centering
@@ -227,63 +183,51 @@ task and which are learned in this thesis.
 \end{figure}
 
 \paragraph{Benchmarks and the shared task.}
-QuanTemp is a benchmark of real-world numerical claims with associated evidence, introduced to study
-this problem in an open-domain setting~\cite{v2024quantemprealworldopendomainbenchmark}. The
-CLEF~CheckThat!~2026 Task~2 shared task~\cite{clef-checkthat:2026:task2} adopts the verifier-guided
-formulation for \emph{multilingual} numerical claim verification across English, Spanish, and Arabic,
-and is the setting in which our system~\cite{khawaja2026gipplab} was developed. More broadly,
-multilingual fact-checking has its own line of benchmarks---for example
-X-Fact~\cite{gupta2021xfactnewbenchmarkdataset} and XFEVER~\cite{chang2023xfeverexploringfactverification}---which
-consistently report that transferring verification across languages is difficult and that performance
-varies widely by language.
+QuanTemp provides real-world numerical claims and evidence for open-domain
+verification~\cite{v2024quantemprealworldopendomainbenchmark}. CLEF~CheckThat!~2026 Task~2 extends the
+verifier-guided formulation to English, Spanish, and Arabic~\cite{clef-checkthat:2026:task2}. Our
+system was developed in this setting~\cite{khawaja2026gipplab}. Other multilingual benchmarks,
+including X-Fact~\cite{gupta2021xfactnewbenchmarkdataset} and
+XFEVER~\cite{chang2023xfeverexploringfactverification}, likewise show that verification transfers
+poorly across languages and that performance varies widely.
 
 \subsection{Multilinguality and Cross-Lingual Consistency}
 \label{subsec:bg-multilingual}
 
-A \emph{multilingual} model is one trained on text in many languages; the practical hope is
-\emph{cross-lingual transfer}, where ability learned in one language carries over to others. A large
-body of work shows that multilingual models learn substantially \emph{shared} internal
-representations, so that semantically equivalent inputs in different languages are encoded similarly.
-For decoder-only LLMs, interpretability studies suggest that models process non-English input through
-intermediate representations that are close to English before mapping back to the input language, an
-effect described as operating in a \emph{latent language}~\cite{wendler2024llamasworkenglishlatent,schut2025multilingualllmsthinkenglish}.
-This shared space is what makes it plausible, in principle, for a model to behave the same way
-regardless of the language of the input.
+A \emph{multilingual} model is trained on several languages. The aim is \emph{cross-lingual transfer}:
+an ability learned in one language should carry over to another. Multilingual models learn partly
+shared representations, so equivalent inputs can be encoded similarly. Interpretability studies of
+decoder-only LLMs suggest that non-English input passes through intermediate representations close to
+English before returning to the target language. This is described as a \emph{latent
+language}~\cite{wendler2024llamasworkenglishlatent,schut2025multilingualllmsthinkenglish}. Such shared
+structure makes language-invariant behaviour possible in principle.
 
 \paragraph{Consistency and language invariance.}
-In practice, however, models are frequently \emph{not} consistent. \emph{Consistency} is defined as
-invariance of a model's predictions under meaning-preserving changes to the input: if two inputs mean
-the same thing, a consistent model produces non-contradictory
-outputs~\cite{elazar2021measuringimprovingconsistencypretrained}. When the meaning-preserving change is
-a \emph{translation}, consistency becomes \emph{cross-lingual consistency}, or \emph{language
-invariance}: agreement of a model's outputs across translations of the same
-input~\cite{Fierro_2022,Qi_2023}. This is the central property the thesis studies. A crucial subtlety,
-which the thesis takes care to respect, is that \textbf{consistency is decoupled from accuracy}: a
-model can be consistently wrong (agreeing across languages on an incorrect answer) or accurate but
-inconsistent (right on average yet disagreeing with itself across
-languages)~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}. A further caveat is that
-answering the same way across languages does not by itself prove the knowledge is stored in a shared
-representation~\cite{ifergan2024beneathsurfaceconsistencyexploring}. Because of this decoupling,
-invariance and accuracy must be \emph{measured separately} before their relationship can be studied,
-which directly shapes the evaluation protocol of this thesis.
+In practice, models are often inconsistent. \emph{Consistency} means that meaning-preserving input
+changes produce non-contradictory outputs
+\cite{elazar2021measuringimprovingconsistencypretrained}. When the change is a translation, this becomes
+\emph{cross-lingual consistency}, or \emph{language invariance}
+\cite{Fierro_2022,Qi_2023}. Consistency and accuracy are separate: a model can be consistently wrong,
+or accurate on average while disagreeing across translations
+\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}. Matching answers also do not prove
+that knowledge is represented identically inside the model
+\cite{ifergan2024beneathsurfaceconsistencyexploring}. The evaluation must therefore measure invariance
+and accuracy separately.
 
 \subsection{Numerical Reasoning in Language Models}
 \label{subsec:bg-numeracy}
 
-\emph{Numeracy}---the ability to reason about numbers---is a known weak point of language models.
-Probing studies report that models have a fragile ``number sense'' and fail on elementary numerical
-operations~\cite{rahman2025fragilenumbersenseprobing,wallace2019nlpmodelsknownumbers}. Part of the
-difficulty is representational: the \emph{magnitude} of a number (how big it is) is not explicitly
-encoded by standard token embeddings, and subword tokenization can split a numeral into pieces that
-obscure its value~\cite{wallace2019nlpmodelsknownumbers}. Two lines of remedy are relevant here.
-\emph{Value-aware} representations encode the numeric \emph{value} of a span rather than relying only
-on its surface tokens~\cite{dutulescu2026valueawarenumericalrepresentationstransformer,schwartz2024numerologicnumberencodingenhanced}.
-Separately, the numeral \emph{script} and \emph{format} themselves matter across languages: the same
-quantity written in Arabic-Indic digits or with different decimal and thousands separators tokenizes
-differently, and accuracy can drop for under-represented scripts even when the underlying arithmetic
+\emph{Numeracy} is the ability to reason about numbers, and it remains a weak point of language
+models. Models often fail on elementary operations
+\cite{rahman2025fragilenumbersenseprobing,wallace2019nlpmodelsknownumbers}. One reason is that standard
+token embeddings do not explicitly encode numerical magnitude. Subword tokenisation can also split a
+numeral into pieces that obscure its value~\cite{wallace2019nlpmodelsknownumbers}. \emph{Value-aware}
+representations address this by encoding the numeric value of a span
+\cite{dutulescu2026valueawarenumericalrepresentationstransformer,schwartz2024numerologicnumberencodingenhanced}.
+Script and formatting create a separate problem. Arabic-Indic digits and different decimal or
+thousands separators lead to different tokenisations, and accuracy can fall even when the arithmetic
 is unchanged~\cite{reddy2026effectscriptsformatsllm,bhattacharya2025investigatinginteractionlinguisticmathematical}.
-This is why numeral script is an independent axis of cross-lingual variation, and why the thesis pays
-particular attention to it for Arabic.
+This makes numeral script an important source of variation for Arabic.
 
 \subsection{Evaluation Metrics and Agreement Statistics}
 \label{subsec:bg-metrics}
@@ -292,40 +236,33 @@ Finally, we define the metrics used to report results. They fall into three grou
 quality, ranking quality, and cross-lingual agreement.
 
 \paragraph{Classification metrics.}
-For a class of interest, \emph{precision} is the fraction of items predicted to be in the class that
-truly are, and \emph{recall} is the fraction of true class members that were predicted. The
-\emph{F1 score} is their harmonic mean, $\mathrm{F1} = 2\,PR/(P+R)$, which balances the two.
-\emph{Macro-F1} averages the F1 score computed separately for each class, giving every class equal
-weight regardless of how frequent it is; we use it for the claim-level verdict, which has three
-classes.
+For one class, \emph{precision} is the fraction of predicted members that are correct, while
+\emph{recall} is the fraction of true members that are retrieved. Their harmonic mean is
+$\mathrm{F1} = 2\,PR/(P+R)$. \emph{Macro-F1} averages F1 across classes and therefore gives each
+class equal weight. We use it for the three-class claim verdict.
 
 \paragraph{Ranking metrics.}
-For a ranked list and a set of \emph{relevant} items, \emph{Recall@$k$} is the fraction of relevant
-items that appear in the top $k$ positions, and \emph{Precision@$k$} is the fraction of the top $k$
-positions occupied by relevant items. \emph{Mean Reciprocal Rank at $k$} (MRR@$k$) rewards placing a
-relevant item early: it is the reciprocal of the rank of the first relevant item (or zero if none
-appears in the top $k$), averaged over queries. In our task, a trace is ``relevant'' when its verdict
-matches the gold claim label, and Recall@5 is the primary ranking metric.
+For a ranked list, \emph{Recall@$k$} is the fraction of relevant items in the top $k$, while
+\emph{Precision@$k$} is the fraction of the top $k$ items that are relevant. \emph{Mean Reciprocal
+Rank at $k$} (MRR@$k$) uses the reciprocal rank of the first relevant item, or zero if none appears in
+the top $k$, and averages it over queries. A trace is relevant here when its verdict matches the gold
+claim label. Recall@5 is the primary ranking metric.
 
 \paragraph{Inter-rater agreement.}
-To quantify how much two or more sets of predictions agree---for example, the verdicts a model
-produces for the same claim in different languages---we borrow \emph{inter-rater agreement} statistics
-from the study of human annotators, treating each language as a ``rater.'' The simplest measure is
-\emph{raw agreement}, the fraction of items on which the raters give the same label, but this rewards
-agreement that would occur by chance. Chance-corrected coefficients address this: \emph{Cohen's
-$\kappa$} measures agreement between exactly two raters beyond
-chance~\cite{cohen1960coefficient}; \emph{Fleiss' $\kappa$} generalizes this to more than two
-raters~\cite{fleiss1971measuring}; and \emph{Krippendorff's $\alpha$} is a reliability coefficient
-that also tolerates missing data~\cite{krippendorff2004content}. All three equal $1$ for perfect
-agreement and around $0$ for chance-level agreement.
+We treat each language-conditioned verdict as a ``rater'' of the same claim. \emph{Raw agreement} is
+the fraction of claims with matching labels, but it includes agreement expected by chance.
+Chance-corrected statistics address this. Cohen's $\kappa$ compares two
+raters~\cite{cohen1960coefficient}, Fleiss' $\kappa$ handles more than
+two~\cite{fleiss1971measuring}, and Krippendorff's $\alpha$ can also tolerate missing
+data~\cite{krippendorff2004content}. Each equals $1$ for perfect agreement and is around $0$ at chance
+level.
 
 \paragraph{Rank-agreement.}
-When the outputs being compared are \emph{rankings} rather than labels, we use rank-correlation
-statistics. \emph{Kendall's $\tau$} compares two orderings by the balance of \emph{concordant} and
-\emph{discordant} pairs (pairs ordered the same versus oppositely)~\cite{kendall1938new}, and
-\emph{Spearman's $\rho$} measures the correlation between the two sets of
-ranks~\cite{spearman1904proof}. Both range from $-1$ (reversed) through $0$ (unrelated) to $+1$
-(identical order). To focus on the top of the ranking, we also use the \emph{Jaccard} overlap of the
-two top-$k$ sets, defined as the size of their intersection divided by the size of their union. These
-rank-agreement measures let us ask not only whether a model reaches the same verdict across languages,
-but whether it ranks the underlying reasoning traces in the same way.
+Rankings require rank-correlation measures. Kendall's $\tau$ compares the number of concordant and
+discordant item pairs~\cite{kendall1938new}, while Spearman's $\rho$ correlates the assigned
+ranks~\cite{spearman1904proof}. Both range from $-1$ for reversed order through $0$ for unrelated
+order to $+1$ for identical order. Jaccard overlap compares the two top-$k$ sets by dividing the size
+of their intersection by the size of their union. These measures show whether a model ranks the same
+traces similarly across languages, not only whether it reaches the same verdict.
+Section~\ref{sec:methodology} uses these concepts to define the scorer, invariance objective, and
+evaluation protocol.

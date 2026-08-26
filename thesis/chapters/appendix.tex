@@ -69,7 +69,6 @@ Candidate reasoning traces:\newline
 } \\
 \bottomrule
 \end{tabular}
-\vspace{6pt}
 \caption{Zero-shot \textbf{listwise} ranking prompt. The model receives all candidate traces at once
 and must return a complete permutation of trace indices together with a claim verdict. The explicit
 instruction not to copy the input order is included precisely because listwise rankers are prone to
@@ -106,7 +105,6 @@ Trace B (original index \{right\_index\}):\newline
 } \\
 \bottomrule
 \end{tabular}
-\vspace{6pt}
 \caption{Zero-shot \textbf{pairwise} ranking prompt. Each claim requires $n(n-1)/2$ calls in the
 balanced orientation and $n(n-1)$ in the bidirectional orientation; the ranking is assembled from the
 accumulated wins.}
@@ -132,7 +130,6 @@ Justification: \{cleaned\_trace\}
 } \\
 \bottomrule
 \end{tabular}
-\vspace{6pt}
 \caption{Input template for the supervised \textbf{trace scorer}. Unlike the prompted baselines this
 is not an instruction: it is the sequence classified by the model, which emits a single relevance
 score per claim--trace pair. The trace justification is stripped of any restated verdict so that the
@@ -178,7 +175,6 @@ googletrans       & 4.0.2   \\
 tqdm              & 4.67.3  \\
 \bottomrule
 \end{tabular}
-\vspace{6pt}
 \caption{Software environment used for the experiments. Specifying exact versions supports
 reproducibility and independent validation of the reported results.}
 \label{tab:technical}
@@ -196,7 +192,6 @@ Llama-3.1-8B-Instruct    & 8B & \texttt{meta-llama/Llama-3.1-8B-Instruct}   \\
 Qwen3-8B                 & 8B & \texttt{Qwen/Qwen3-8B}                      \\
 \bottomrule
 \end{tabular}
-\vspace{6pt}
 \caption{Backbone models. All three are open-weight instruction-tuned checkpoints obtained from the
 Hugging Face Hub and adapted with QLoRA (Section~\ref{subsec:method-scorer}).}
 \label{tab:backbones}

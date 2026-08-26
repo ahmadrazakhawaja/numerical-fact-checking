@@ -55,6 +55,10 @@
 \usepackage{multirow}
 \usepackage{xcolor}
 \usepackage{caption}
+% acmart declares \captionsetup[table]{position=top}; our table captions sit
+% below the tabular, so tell caption/ the real position or the above/below
+% skips are applied backwards and tables get a different gap than figures.
+\captionsetup[table]{position=bottom}
 \usepackage{subcaption}
 \usepackage{enumitem}
 

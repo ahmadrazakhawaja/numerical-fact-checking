@@ -38,15 +38,23 @@ Model & Complete & Fleiss $\kappa$ & EN--ES & EN--AR & ES--AR \\
 \quad Mistral, multiling.\ trace scorer & 0.8802 & 0.8298 & 0.0181 & 0.0161 & 0.0137 \\
 \quad Mistral, trace scorer & 0.8885 & 0.8404 & -0.0084 & 0.0122 & 0.0179 \\
 \addlinespace[3pt]
-\multicolumn{6}{l}{\itshape Baselines}\\
+\multicolumn{6}{l}{\itshape Prompted baselines}\\
 \quad Mistral, prompted (zero-shot) & 0.9395 & 0.9168 & 0.6754 & 0.3674 & 0.4023 \\
 \quad Llama, prompted (zero-shot) & 0.9320 & 0.9049 & 0.1242 & 0.0697 & 0.3416 \\
+\midrule
+\multicolumn{6}{l}{\itshape Reported for reference only; excluded from every statistic}\\
+\quad \itshape Random ranking (floor) & --- & --- & --- & --- & --- \\
+\quad \itshape Llama, inv.\ $\lambda^\star$=0.05$^{\dagger}$ & --- & --- & --- & --- & --- \\
+\quad \itshape Mistral, English DPO$^{\dagger}$ & --- & --- & --- & --- & --- \\
+\quad \itshape Qwen, prompted (zero-shot)$^{\dagger}$ & --- & --- & --- & --- & --- \\
 \bottomrule
 \end{tabular}
-\vspace{6pt}
 \caption{Cross-lingual consistency, measured separately from task accuracy. \emph{Complete} is the
-fraction of claims on which all three languages produce the same verdict. Ranking agreement is the
-mean pairwise Kendall $\tau$ between the language-conditioned trace orderings. Best per column in bold.}
+fraction of claims on which all three languages produce the same verdict; ranking agreement is the
+mean pairwise Kendall $\tau$ between the language-conditioned trace orderings. Best per column in
+bold. All agreement values are dashed (---) for the random ranking and for the invalid runs
+($\dagger$): each of them scores exactly $1.0000$ on every measure, the random ranking because it
+ignores the input by construction and the others because the same predictions were compared with
+themselves, so the figure reflects the artefact rather than any property of the system.}
 \label{tab:results-consistency}
-
 \end{table}

@@ -30,9 +30,10 @@ summarises the findings for all three research questions.
 \label{subsec:res-setup}
 
 All results use the held-out \emph{test} set in the aligned trilingual form described in
-Section~\ref{subsec:method-data}. It contains $4{,}233$ claims, each available in English, Spanish,
-and Arabic with parallel trace sets. Task metrics are calculated separately for each language.
-Consistency metrics compare the three language-conditioned outputs for the same claim. The test set
+Section~\ref{subsec:method-data} and summarised in Table~\ref{tab:dataset}. It contains $4{,}233$
+claims, each available in English, Spanish, and Arabic with parallel trace sets of $20$ candidate
+traces per claim. Task metrics are computed separately for each language; consistency metrics compare
+the three language-conditioned outputs for the same claim. The test set
 is separate from the training and validation splits. No configuration was trained on it, and early
 stopping and best-epoch selection used only the validation split. The results therefore measure
 generalisation to unseen claims. Each configuration was trained and evaluated with three random
@@ -40,14 +41,43 @@ seeds, and we report the mean. In total, the study contains $32$ configurations:
 earlier trace scorers, standard multilingual fine-tunes, and the invariance-trained models introduced
 in this thesis.
 
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrr@{}}
+\toprule
+& Count & Share \\
+\midrule
+Claims (each available in EN, ES, AR) & $4{,}233$ & --- \\
+Candidate reasoning traces per claim  & $20$      & --- \\
+Claims with no gold-matching trace    & $578$     & $13.7\%$ \\
+\addlinespace[3pt]
+\multicolumn{3}{l}{\itshape Gold claim-label distribution}\\
+\quad \textsf{False}                  & $2{,}938$ & $69.4\%$ \\
+\quad \textsf{True}                   & $868$     & $20.5\%$ \\
+\quad \textsf{Conflicting}            & $427$     & $10.1\%$ \\
+\midrule
+Recall@5 upper bound                  & \multicolumn{2}{r}{$0.3005$} \\
+\bottomrule
+\end{tabular}
+\caption{Composition of the aligned trilingual test set. Every claim is present in all three
+languages with parallel trace sets, so the counts and the label distribution are identical per
+language. Claims whose candidate traces never match the gold label contribute zero Recall@5 whatever
+the ranking, which is what caps the attainable Recall@5 at $0.3005$.}
+\label{tab:dataset}
+\end{table}
+
 \paragraph{Excluded runs.}
 Four of the $32$ configurations are excluded from the statistics below. Three rows---\emph{Mistral,
-English DPO}, \emph{Llama, inv.\ $\lambda^\star$=0.05}, and \emph{Qwen, prompted}---have the same
-scores to four decimal places. Their scores are also identical across all three languages, and every
-cross-lingual agreement measure is exactly $1.000$. Three different systems cannot plausibly produce
-identical results at this level. We therefore treat these rows as duplicated or failed runs and
-exclude them to avoid distorting the group means. The remaining analysis contains $28$
-configurations.
+English DPO}, \emph{Llama, inv.\ $\lambda^\star$=0.05}, and \emph{Qwen, prompted}---report the same
+scores to four decimal places, identical across all three languages, with every cross-lingual
+agreement measure exactly $1.000$. Inspecting their outputs explains the pattern: these runs
+degenerated to emitting the input order, returning the identity permutation $[0,1,2,\dots]$ for every
+claim instead of a content-based ranking. A ranking that ignores the input is by definition the same
+in every language, so on parallel data it yields identical per-language scores and perfect
+cross-lingual agreement. The resulting numbers describe the failure mode, not the systems, and the
+agreement of exactly $1.000$ measures nothing at all. We therefore exclude these rows from every
+statistic and report them only for reference in Tables~\ref{tab:results-summary}
+and~\ref{tab:results-main}. The remaining analysis contains $28$ configurations.
 
 The fourth exclusion has a different reason and illustrates the central measurement principle of this
 thesis. The \emph{random ranking} baseline also achieves
@@ -63,7 +93,7 @@ information. We retain it in Table~\ref{tab:results-summary} as the accuracy flo
 
 \paragraph{Achievable ceiling.}
 As established in Section~\ref{subsec:method-task}, Recall@5 has a structural upper bound. On this
-test set, the bound is $0.3005$. In addition, $578$ of the $4{,}233$ claims ($13.7\%$) have no
+test set the bound is $0.3005$ (Table~\ref{tab:dataset}). In addition, $578$ of the $4{,}233$ claims ($13.7\%$) have no
 candidate trace whose verdict matches the gold label. These claims receive zero Recall@5 regardless
 of the ranking. The Recall@5 results below should therefore be compared with $0.3005$, not with $1.0$.
 

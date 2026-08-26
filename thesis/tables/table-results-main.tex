@@ -1,5 +1,5 @@
-\begin{table}[htbp]
-\centering\small\setlength{\tabcolsep}{4.2pt}
+\begin{table}[H]
+\centering\footnotesize\setlength{\tabcolsep}{4.2pt}\renewcommand{\arraystretch}{0.93}
 \begin{tabular}{l rrr rrr r}
 \toprule
 & \multicolumn{3}{c}{Recall@5} & \multicolumn{3}{c}{Macro-F1} & \\
@@ -38,17 +38,22 @@ Model & EN & ES & AR & EN & ES & AR & Mean \\
 \quad Mistral, multiling.\ trace scorer & 0.2140 & 0.2430 & 0.2185 & 0.5806 & 0.5915 & 0.5864 & 0.5862 \\
 \quad Mistral, numeric trace scorer & 0.2184 & 0.2155 & 0.2228 & 0.5826 & 0.5693 & 0.5938 & 0.5819 \\
 \addlinespace[3pt]
-\multicolumn{8}{l}{\itshape Baselines}\\
+\multicolumn{8}{l}{\itshape Prompted baselines}\\
 \quad Mistral, prompted (zero-shot) & 0.2225 & 0.2173 & 0.2129 & 0.5771 & 0.5795 & 0.5718 & 0.5761 \\
 \quad Llama, prompted (zero-shot) & 0.2234 & 0.2222 & 0.2219 & 0.5751 & 0.5716 & 0.5792 & 0.5753 \\
+\midrule
+\multicolumn{8}{l}{\itshape Reported for reference only; excluded from every statistic}\\
+\quad \itshape Random ranking (floor) & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 \\
+\quad \itshape Llama, inv.\ $\lambda^\star$=0.05$^{\dagger}$ & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 \\
+\quad \itshape Mistral, English DPO$^{\dagger}$ & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 \\
+\quad \itshape Qwen, prompted (zero-shot)$^{\dagger}$ & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 \\
 \midrule
 Recall@5 upper bound & \multicolumn{3}{c}{$0.3005$} & \multicolumn{4}{c}{---} \\
 \bottomrule
 \end{tabular}
-\vspace{6pt}
-\caption{Per-model results on the aligned trilingual test set ($4{,}233$ parallel claims per
-language). \emph{Mean} is the average macro-F1 over the three languages; best value per column in
-bold. All values are means over three random seeds.}
+\caption{Per-model results on the held-out trilingual test set. \emph{Mean} averages over the three
+languages; best value per column in bold, over the $28$ valid configurations. All values are means over
+three random seeds. Rows marked $\dagger$ are excluded from every statistic: those runs degenerated to
+emitting the input order rather than ranking (Section~\ref{subsec:res-setup}).}
 \label{tab:results-main}
-
 \end{table}

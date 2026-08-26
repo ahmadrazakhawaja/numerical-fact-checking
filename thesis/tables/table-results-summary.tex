@@ -1,14 +1,5 @@
 \begin{table}[htbp]
 \centering\footnotesize\setlength{\tabcolsep}{3.6pt}
-\caption{Condensed results on the held-out trilingual test set. For each training group we report the
-group mean over its $n$ configurations, followed by its most accurate (acc.) and, where different,
-its most cross-lingually stable (stab.) member. The three metric blocks are the official ranking
-metric (Recall@5, whose attainable ceiling is $0.3005$), the official verdict metric (macro-F1), and
-the consistency measures the invariance objective targets: Fleiss $\kappa$ over the three
-language-conditioned verdicts and mean pairwise Kendall $\tau$ between the English and Arabic
-rankings. Bold marks the best value in each column over all $28$ configurations. Full per-model
-results are in Tables~\ref{tab:results-main} and~\ref{tab:results-consistency}.}
-\label{tab:results-summary}
 \begin{tabular}{l c rrrr rrrr rr}
 \toprule
 & & \multicolumn{4}{c}{Recall@5 (ceiling $0.3005$)} & \multicolumn{4}{c}{Macro-F1} & \multicolumn{2}{c}{Consistency} \\
@@ -30,12 +21,19 @@ Configuration & $n$ & EN & ES & AR & Mean & EN & ES & AR & Mean & $\kappa$ & $\t
 \itshape Prompted baselines & 2 & \itshape 0.2229 & \itshape 0.2198 & \itshape 0.2174 & \itshape 0.2200 & \itshape 0.5761 & \itshape 0.5756 & \itshape 0.5755 & \itshape 0.5757 & \itshape 0.9108 & \itshape 0.2185 \\
 \quad Mistral, prompted (zero-shot) {\scriptsize (acc.)} &  & 0.2225 & 0.2173 & 0.2129 & 0.2176 & 0.5771 & 0.5795 & 0.5718 & 0.5761 & 0.9168 & 0.3674 \\
 \midrule
-\multicolumn{12}{l}{\itshape By backbone family (all settings pooled)}\\
-\quad Llama & 13 & 0.2636 & 0.2674 & 0.2609 & 0.2640 & 0.6139 & 0.6164 & 0.5948 & 0.6083 & 0.9195 & 0.3161 \\
-\quad Qwen & 10 & 0.2663 & 0.2681 & 0.2620 & 0.2655 & 0.6175 & 0.6189 & 0.6020 & 0.6128 & 0.9353 & 0.4505 \\
-\quad Mistral & 5 & 0.2262 & 0.2359 & 0.2247 & 0.2289 & 0.5843 & 0.5861 & 0.5825 & 0.5843 & 0.8711 & 0.1197 \\
-\midrule
-\itshape Random ranking (floor) & 1 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 & \itshape 1.0000 & \itshape 1.0000 \\
+\multicolumn{12}{l}{\itshape Reported for reference only; excluded from every statistic (see Section~\ref{subsec:res-setup})}\\
+\itshape \quad Random ranking (floor) & 1 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.2181 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 & \itshape 0.5820 & \itshape --- & \itshape --- \\
+\itshape \quad Llama, inv.\ $\lambda^\star$=0.05$^{\dagger}$ & 1 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape --- & \itshape --- \\
+\itshape \quad Mistral, English DPO$^{\dagger}$ & 1 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape --- & \itshape --- \\
+\itshape \quad Qwen, prompted (zero-shot)$^{\dagger}$ & 1 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.2228 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape 0.5938 & \itshape --- & \itshape --- \\
 \bottomrule
 \end{tabular}
+\caption{Condensed results on the held-out trilingual test set. Each training group shows its mean over $n$
+configurations, then its most accurate (acc.) and, where different, its most cross-lingually stable
+(stab.) member. Bold marks the best value per column among the $28$ valid configurations. Consistency
+is Fleiss $\kappa$ over the language-conditioned verdicts and mean pairwise Kendall $\tau$ (EN--AR);
+both are dashed for the reference rows, whose perfect agreement is an artefact of ranking
+independently of the input (Section~\ref{subsec:res-setup}). Per-model results are in
+Tables~\ref{tab:results-main} and~\ref{tab:results-consistency}.}
+\label{tab:results-summary}
 \end{table}

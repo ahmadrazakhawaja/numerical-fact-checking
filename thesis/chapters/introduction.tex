@@ -23,13 +23,13 @@ languages and a reliable verifier must preserve its numerical meaning across the
 Large language models (LLMs) have become the standard tool for the reasoning and ranking components of
 automated fact-checking, used both as rankers of candidate evidence and as judges of reasoning
 quality~\cite{sahitaj2025automatedfactcheckingrealworldclaims,qin2024largelanguagemodelseffective}.
-A growing body of work shows, however, that their judgments are not language-invariant: semantically
+A growing body of work shows, however, that their judgments are not language-invariant, semantically
 equivalent inputs may receive different rankings or verdicts depending solely on the language in which
 they are expressed~\cite{fu2025reliablemultilingualllmasajudge}. Prompt-based rankers also suffer from
 presentation biases. For example, the position or length of a candidate can affect the model's
 choice~\cite{shi2025judgingjudgessystematicstudy}. At the same time, evidence suggests that multilingual
 LLMs learn partly language-independent internal
-representations~\cite{wendler2024llamasworkenglishlatent,STOLLE2026100250}. This creates a puzzle: why
+representations~\cite{wendler2024llamasworkenglishlatent,STOLLE2026100250}. This creates a puzzle, why
 does shared internal structure not lead to consistent behaviour across languages?
 
 This puzzle motivates the central question of the thesis. If a model is trained to make consistent
@@ -40,7 +40,7 @@ useful \emph{objective} to optimise, or only a property worth measuring?
 \subsection{Problem Statement and Research Gap}
 \label{sec:problem}
 
-An important point from the consistency literature makes this question more precise: consistency and
+An important point from the consistency literature makes this question more precise, consistency and
 correctness are separate properties~\cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}.
 A model can give the same wrong answer in every language. It can also be accurate on average while
 giving different answers to translations of the same input. Cross-lingual agreement therefore says
@@ -48,9 +48,9 @@ nothing about correctness on its own. Any benefit from invariance must be shown 
 measure of task quality, rather than inferred from agreement statistics.
 
 Two strands of recent work are relevant but have not yet been brought together. First, objectives
-that target cross-lingual consistency directly---consistency
+that target cross-lingual consistency directly, consistency
 regularisation, cross-lingual self-alignment, and preference optimisation adapted to parallel
-prompts~\cite{zheng2021consistencyregularizationcrosslingualfinetuning,wang2025calmunleashingcrosslingualselfaligning,liu2026posttraininglanguagemodelscrosslingual}---show
+prompts~\cite{zheng2021consistencyregularizationcrosslingualfinetuning,wang2025calmunleashingcrosslingualselfaligning,liu2026posttraininglanguagemodelscrosslingual} show
 that invariance can be optimised rather than only observed. However, these methods are evaluated on
 factual question answering or general benchmarks, not on ranking quality in a downstream task. It
 therefore remains unclear whether optimising for invariance improves task performance. Second,
@@ -192,8 +192,8 @@ In addressing these questions, this thesis makes the following contributions:
     Preference Optimization~\cite{rafailov2024directpreferenceoptimizationlanguage}, and supervised
     trace scoring. It also explains why pointwise scoring makes invariance directly optimisable.
     \item It contributes an evaluation protocol that reports task quality and cross-lingual agreement
-    \emph{independently}, and at two levels---the final verdict and the underlying trace
-    ranking---and shows that these two levels give substantially different answers.
+    \emph{independently}, and at two levels the final verdict and the underlying trace
+    ranking and shows that these two levels give substantially different answers.
     \item It reports an empirical study over three open-weight backbones and $28$ non-degenerate
     configurations, evaluated on a held-out trilingual test set of $4{,}233$ parallel claims with
     three seeds per configuration, including the interaction between the invariance objective and
@@ -224,7 +224,7 @@ and parameter-efficient fine-tuning methods on which the training objectives bui
 \textbf{Section~\ref{sec:background}} introduces the concepts and terminology the rest of the thesis
 assumes, for readers unfamiliar with language models, ranking formulations, fact-checking pipelines,
 or the agreement statistics used to quantify consistency.
-\textbf{Section~\ref{sec:methodology}} presents the methodology: the task formulation and data,
+\textbf{Section~\ref{sec:methodology}} presents the methodology, the task formulation and data,
 the trace-scoring architecture and its training objective, the score-level language-invariance
 objective, the value-aware numerical components, the baselines, and the evaluation protocol.
 \textbf{Section~\ref{sec:results}} reports and discusses the results, presenting task performance and

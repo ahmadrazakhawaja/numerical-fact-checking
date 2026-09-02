@@ -140,23 +140,23 @@ reasoning, rather than only as a property to measure.
 
 We study the question on CLEF CheckThat! 2026 Task~2, which requires ranking candidate reasoning
 traces for numerical claims in English, Spanish, and Arabic. A verdict is then derived from the
-top-ranked traces. We build on our shared-task submission: a Llama-3.1-8B trace scorer fine-tuned with
+top-ranked traces. We build on our shared-task submission, a Llama-3.1-8B trace scorer fine-tuned with
 Quantized Low-Rank Adaptation (QLoRA), which ranked first on English and third on Spanish. We add a
 score-level language-invariance objective. It penalises the model when it gives different normalised
 relevance scores to corresponding reasoning traces across languages. We also introduce an evaluation
 protocol that separates task accuracy from cross-lingual agreement and measures agreement at two
-levels: the final verdict and the underlying trace ranking. We evaluate $28$ configurations across
+levels, the final verdict and the underlying trace ranking. We evaluate $28$ configurations across
 three open-weight backbones on a held-out trilingual test set of $4{,}233$ parallel claims.
 
 The results show a clear separation between ranking quality and ranking stability. Invariance training
-does not change the official ranking metric: Recall@5 is statistically indistinguishable from standard
+does not change the official ranking metric, Recall@5 is statistically indistinguishable from standard
 multilingual fine-tuning, and both approaches are close to the metric's attainable ceiling. However,
 invariance training makes the rankings roughly four times more stable across languages. The stability
 ranges of the invariance-trained and non-invariance systems do not overlap. Verdict quality also
 improves modestly, mainly in Arabic and especially for the minority \textsf{Conflicting} class.
 Verdict-level agreement is already high for every system and therefore does not distinguish between
 them. Measuring consistency only from final answers would have missed the main effect. The objective
-does not mainly change the label the model reaches; it changes whether the model relies on the same
+does not mainly change the label the model reaches, it changes whether the model relies on the same
 evidence across languages.
 \end{abstract}
 
@@ -171,9 +171,9 @@ evidence across languages.
 
 \input{chapters/introduction}
 
-\input{chapters/related_work}
-
 \input{chapters/background}
+
+\input{chapters/related_work}
 
 \input{chapters/methodology}
 

@@ -11,7 +11,7 @@
 
 This section reviews work on LLM-based ranking, multilingual fact-checking,
 cross-lingual consistency, numerical reasoning, and preference-based fine-tuning.
-Together, these areas frame the central question of the thesis: if a model is
+Together, these areas frame the central question of the thesis, if a model is
 trained to behave consistently across languages, do its ranking and reasoning
 also become more reliable?
 
@@ -93,7 +93,7 @@ languages reveal clear cross-lingual differences
 \cite{jiang2020xfactrmultilingualfactualknowledge}.
 
 Together, these studies show why multilingual fact-checking is both important and
-difficult. They also provide the practical motivation for this thesis: if
+difficult. They also provide the practical motivation for this thesis, if
 fact-checking systems behave differently across languages, then language
 invariance becomes a useful objective to study directly.
 
@@ -170,7 +170,7 @@ the final verdict.
 Third, training encourages \emph{score-level invariance}. The model is penalised
 when it assigns different normalised score vectors to aligned traces across
 languages. This regulariser is related to the consistency objectives discussed in
-Section~\ref{subsec:peft}; Section~\ref{sec:methodology} gives the exact
+Section~\ref{subsec:peft} Section~\ref{sec:methodology} gives the exact
 formulation. All invariance measures remain separate from task accuracy. This is
 essential for RQ2 because a model may be consistent but wrong, or accurate but
 unstable~\cite{elazar2021measuringimprovingconsistencypretrained, Qi_2023}.
@@ -262,7 +262,7 @@ budget. LoRA freezes the base model and trains only small low-rank update
 matrices~\cite{hu2021loralowrankadaptationlarge}. QLoRA further reduces memory use
 by loading the base model at low precision and training adapters on top of
 it~\cite{dettmers2023qloraefficientfinetuningquantized}. These methods support the
-open-weight instruction-tuned models used here: Mistral-7B
+open-weight instruction-tuned models used here, Mistral-7B
 \cite{jiang2023mistral7b}, Qwen3-8B~\cite{qwen3technicalreport}, and
 Llama-3.1-8B-Instruct~\cite{llama31instruct}.
 
@@ -327,7 +327,7 @@ metrics, rather than only making outputs more similar across languages. This
 connects to work on ranking bias
 \cite{shi2025judgingjudgessystematicstudy,
 qiao2026llmbasedlistwisererankingeffect,
-qin2024largelanguagemodelseffective}: if rankings are affected by irrelevant
+qin2024largelanguagemodelseffective}, if rankings are affected by irrelevant
 input variation, reducing language-driven variation may make them more reliable.
 
 \paragraph{RQ2: Invariance and reasoning quality.}

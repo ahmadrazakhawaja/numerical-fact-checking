@@ -53,11 +53,11 @@ Recall@5 over the traces whose verdict matches the gold claim label,
 where $r_{1:5}(c)$ denotes the top five traces. Macro-F1 measures claim-verdict quality, and the
 official per-language score is the mean of macro-F1 and Recall@5. We also report MRR@5. Recall@5 has
 a structural ceiling. With $m$ gold-matching traces, even a perfect ranking achieves at most
-$\min(5,m)/m$; when $m=0$, Recall@5 is zero. On the validation data, the maximum attainable values are
+$\min(5,m)/m$, when $m=0$, Recall@5 is zero. On the validation data, the maximum attainable values are
 $0.39$, $0.32$, and $0.28$ for English, Spanish, and Arabic. These ceilings limit the headroom of
 every ranker.
 
-Generative rankers---listwise prompting, pairwise prompting, and DPO over complete rankings---remain
+Generative rankers listwise prompting, pairwise prompting, and DPO over complete rankings remain
 sensitive to candidate order and prompt format
 \cite{qin2024largelanguagemodelseffective,shi2025judgingjudgessystematicstudy,rafailov2024directpreferenceoptimizationlanguage,qiao2026llmbasedlistwisererankingeffect,fu2025reliablemultilingualllmasajudge}.
 Supervised trace scoring instead assigns an independent relevance score to each claim--trace pair and
@@ -346,7 +346,7 @@ adapter for inference.
 \paragraph{Plain-text numeric normalisation.}
 The second component exposes canonical values without changing the embedding layer. It appends a
 plain-text section headed
-\texttt{Normalized numbers:} to the trace-scorer input. This section lists the numbers found in the
+\texttt{Normalized numbers}, to the trace-scorer input. This section lists the numbers found in the
 claim, evidence, and reasoning trace. When a number's original and canonical forms differ, it is
 shown as a \texttt{surface=canonical} pair.
 
@@ -474,13 +474,13 @@ Weights and Biases records the experiments and metrics.
 
 \paragraph{Compute.}
 Experiments run on NVIDIA A100 GPUs. Main trace-scorer training uses two GPUs with distributed data
-parallelism through \texttt{torchrun}; inference and smaller ablations use one GPU. All LLM scorers
+parallelism through \texttt{torchrun}, inference and smaller ablations use one GPU. All LLM scorers
 load the base model at 4-bit precision, use QLoRA adapters and SDPA attention, and enable CUDA
 expandable memory segments for long inputs.
 
 \paragraph{Experiment matrix.}
 The backbones have different roles. \textbf{Mistral-7B-Instruct-v0.3} covers all shared-task ranking
-formulations and serves as a reference; it is not extended with the invariance objective.
+formulations and serves as a reference, it is not extended with the invariance objective.
 \textbf{Llama-3.1-8B-Instruct} is the primary backbone. It covers prompted baselines, DPO,
 multilingual trace scoring, long-context and regularised variants, numeric normalisation, and the
 invariance objective. \textbf{Qwen3-8B} uses the matching prompted baseline, the best Llama ranking

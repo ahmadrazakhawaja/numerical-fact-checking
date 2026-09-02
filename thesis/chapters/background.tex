@@ -81,7 +81,7 @@ setup.
 \begin{figure}[htbp]
   \centering
   \includesvg[width=\linewidth,height=0.4\textheight,keepaspectratio]{lora-qlora}
-  \caption{LoRA and QLoRA. The pretrained weight matrix $W$ is frozen; a small pair of low-rank
+  \caption{LoRA and QLoRA. The pretrained weight matrix $W$ is frozen a small pair of low-rank
   matrices $A$ and $B$ (with rank $r\ll d$) is trained and their product is added to the frozen
   weight, so the layer computes $h = Wx + (\alpha/r)\,BAx$ and only $A$ and $B$ are learned. QLoRA
   additionally stores the frozen weight $W$ in 4-bit precision to reduce memory.}
@@ -89,7 +89,7 @@ setup.
 \end{figure}
 
 \paragraph{Preference optimisation.}
-Models can also learn from \emph{preferences}: a preferred and a rejected output for the same input.
+Models can also learn from \emph{preferences}, a preferred and a rejected output for the same input.
 Reinforcement Learning from Human Feedback (RLHF) requires a separate reward model and reinforcement
 learning. Direct Preference Optimization (DPO) provides a simpler alternative
 \cite{rafailov2024directpreferenceoptimizationlanguage}. It increases the likelihood of preferred
@@ -106,7 +106,7 @@ differ in how many candidates the model sees at once (Figure~\ref{fig:ranking-fo
 \begin{itemize}
 \item \textbf{Pointwise.} Each candidate is scored independently, and the ranking is obtained by
 sorting the scores. This is the formulation our trace scorer uses.
-\item \textbf{Pairwise.} The model compares two candidates at a time and states which is better; a
+\item \textbf{Pairwise.} The model compares two candidates at a time and states which is better, a
 global ordering is assembled from the accumulated pairwise
 preferences~\cite{qin2024largelanguagemodelseffective}. This keeps each decision simple but requires a
 number of comparisons that grows quadratically with the number of candidates.
@@ -120,8 +120,8 @@ order in which candidates are listed~\cite{liu-etal-2025-lipo}.
   \includesvg[width=\linewidth,height=0.42\textheight,keepaspectratio]{ranking-formulations}
   \caption{The three standard formulations for ranking candidates with an LLM. \emph{Pointwise}
   scoring evaluates each candidate independently and sorts by score (the formulation used by our
-  trace scorer); \emph{pairwise} ranking compares two candidates at a time and orders them by
-  accumulated wins; \emph{listwise} ranking presents all candidates in one prompt and reads off the
+  trace scorer), \emph{pairwise} ranking compares two candidates at a time and orders them by
+  accumulated wins, \emph{listwise} ranking presents all candidates in one prompt and reads off the
   model's output order.}
   \label{fig:ranking-formulations}
 \end{figure}
@@ -140,7 +140,7 @@ Our system reformulates ranking as \emph{binary classification}. A classifier ma
 more real-valued \emph{logits}. Binary classification can use one logit $\ell$ with the sigmoid
 function $\sigma(\ell) = 1/(1+e^{-\ell})$, or two logits
 $(\ell^{\text{neg}}, \ell^{\text{pos}})$ with softmax. Both produce a probability for the positive
-class. Training minimises cross-entropy between this probability and the true label; the one-logit
+class. Training minimises cross-entropy between this probability and the true label, the one-logit
 case uses binary cross-entropy. The positive-class probability becomes the relevance score used for
 ranking. A small \emph{classification head} converts the model's internal representation into the
 required logits.
@@ -194,7 +194,7 @@ poorly across languages and that performance varies widely.
 \subsection{Multilinguality and Cross-Lingual Consistency}
 \label{subsec:bg-multilingual}
 
-A \emph{multilingual} model is trained on several languages. The aim is \emph{cross-lingual transfer}:
+A \emph{multilingual} model is trained on several languages. The aim is \emph{cross-lingual transfer},
 an ability learned in one language should carry over to another. Multilingual models learn partly
 shared representations, so equivalent inputs can be encoded similarly. Interpretability studies of
 decoder-only LLMs suggest that non-English input passes through intermediate representations close to
@@ -207,7 +207,7 @@ In practice, models are often inconsistent. \emph{Consistency} means that meanin
 changes produce non-contradictory outputs
 \cite{elazar2021measuringimprovingconsistencypretrained}. When the change is a translation, this becomes
 \emph{cross-lingual consistency}, or \emph{language invariance}
-\cite{Fierro_2022,Qi_2023}. Consistency and accuracy are separate: a model can be consistently wrong,
+\cite{Fierro_2022,Qi_2023}. Consistency and accuracy are separate, a model can be consistently wrong,
 or accurate on average while disagreeing across translations
 \cite{elazar2021measuringimprovingconsistencypretrained,Qi_2023}. Matching answers also do not prove
 that knowledge is represented identically inside the model
@@ -232,7 +232,7 @@ This makes numeral script an important source of variation for Arabic.
 \subsection{Evaluation Metrics and Agreement Statistics}
 \label{subsec:bg-metrics}
 
-Finally, we define the metrics used to report results. They fall into three groups: classification
+Finally, we define the metrics used to report results. They fall into three groups, classification
 quality, ranking quality, and cross-lingual agreement.
 
 \paragraph{Classification metrics.}

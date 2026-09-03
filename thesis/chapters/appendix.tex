@@ -148,10 +148,12 @@ present only in the numeric-normalization configurations
 All experiments were run on NVIDIA A100 GPUs on the institutional cluster, with distributed
 data-parallel training across two GPUs via \texttt{torchrun} for the main trace-scorer runs and a
 single GPU for inference and smaller ablations. Table~\ref{tab:technical} lists the software
-environment. Together with the code and configuration files in the project repository, these versions
-are intended to make the reported results reproducible: model behaviour under quantized fine-tuning is
-sensitive to the exact versions of \texttt{transformers}, \texttt{peft}, and \texttt{bitsandbytes} in
-particular.
+environment. The training, inference and evaluation code, together with the configuration files for
+every reported run, is available at
+\url{https://github.com/ahmadrazakhawaja/numerical-fact-checking}~\cite{thesisrepo}. Together with
+the versions in Table~\ref{tab:technical}, it is intended to make the reported results reproducible:
+model behaviour under quantized fine-tuning is sensitive to the exact versions of
+\texttt{transformers}, \texttt{peft}, and \texttt{bitsandbytes} in particular.
 
 \begin{table}[htbp]
 \centering\small

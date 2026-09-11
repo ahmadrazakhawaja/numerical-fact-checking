@@ -172,7 +172,9 @@ than three words because they contain too little reasoning for training.
 \centering
   \includesvg[width=0.78\linewidth,height=0.45\textheight,
     keepaspectratio]{trace-scorer-ranking}
-\caption{Input-output flow of the supervised trace scorer. Candidate traces are scored independently, sorted by positive-class probability, and aggregated through the top-ranked trace verdicts.}
+\caption{Scoring and verdict aggregation at inference. Each candidate trace is paired with the shared
+claim and evidence, scored independently, and ranked by positive-class probability. A majority vote
+over the top-five trace verdicts determines the final claim verdict.}
 \label{fig:supervised-trace-scorer}
 \end{figure}
 
@@ -180,7 +182,9 @@ than three words because they contain too little reasoning for training.
 \centering
   \includesvg[width=\linewidth,height=0.65\textheight,
     keepaspectratio]{trace-scorer-pipeline}
-\caption{Input-output flow of the supervised trace scorer. Candidate traces are scored independently, sorted by positive-class probability, and aggregated through the top-ranked trace verdicts.}
+\caption{Supervised trace-scoring pipeline from multilingual data to predictions. Claim--trace pairs
+are constructed and preprocessed, then passed to the QLoRA-adapted Llama-3.1-8B classifier. Its binary
+relevance scores determine the ranked trace list and the final verdict through top-five aggregation.}
 \label{fig:supervised-trace-scorer-pipeline}
 \end{figure}
 

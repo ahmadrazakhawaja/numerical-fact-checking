@@ -161,8 +161,8 @@ behave very differently. Only ranking agreement clearly distinguishes between sy
   \includesvg[width=\linewidth]{results-agreement}
   \caption{Verdict agreement versus ranking agreement for the best configuration in each training
   group, selected by mean macro-F1. Fleiss $\kappa$ over the three language-conditioned verdicts is
-  high for every group and separates them weakly. Mean pairwise Kendall $\tau$ between the
-  language-conditioned trace rankings separates the same systems by almost an order of magnitude.}
+  high for every group and separates them weakly. The mean across claims of English--Arabic
+  Kendall $\tau$ between trace rankings separates the same systems by almost an order of magnitude.}
   \label{fig:results-agreement}
 \end{figure}
 
@@ -194,8 +194,8 @@ stability but overlap on accuracy.
 \begin{figure}[htbp]
   \centering
   \includesvg[width=\linewidth]{results-tradeoff}
-  \caption{Each point is one configuration ($n=28$). The vertical axis is the mean pairwise Kendall
-  $\tau$ between the English and Arabic trace rankings the horizontal axis is macro-F1 averaged over
+  \caption{Each point is one configuration ($n=28$). The vertical axis is the mean across claims of
+  English--Arabic Kendall $\tau$ between trace rankings; the horizontal axis is macro-F1 averaged over
   the three languages. The invariance-trained population is fully separated from every other
   configuration on stability, while the accuracy ranges overlap.}
   \label{fig:results-tradeoff}
@@ -227,7 +227,7 @@ Recall@5 needs to be considered separately because it is the official ranking me
 marginally \emph{higher} Recall@5 than invariance training ($0.2679$ against $0.2656$), and the single
 best Recall@5 of the study belongs to a standard fine-tune (\emph{Llama, reg.}, $0.2710$ in English).
 Per language the two groups are within $0.007$ of each other everywhere
-(Figure~\ref{fig:results-language}, right panel). Given the ceiling of $0.3005$ and the near-collinearity
+(Figure~\ref{fig:results-language}, bottom panel). Given the ceiling of $0.3005$ and the near-collinearity
 of the ranking metrics noted in Section~\ref{subsec:res-task}, the fair reading is that the two
 approaches are tied on Recall@5. Invariance training does not measurably change how much relevant
 evidence appears in the top five.
